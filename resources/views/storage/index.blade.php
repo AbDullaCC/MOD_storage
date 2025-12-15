@@ -37,24 +37,39 @@
 
         <div class="bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 class="text-xl font-bold mb-4 text-blue-900">📥 إدخال للمخزن (إضافة)</h2>
+
             <form action="{{ route('storage.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 @csrf
+
                 <input type="text" name="name" placeholder="اسم الصنف"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-                <input type="text" name="category" placeholder="التصنيف (مثلاً: لابتوب - سيارة)"
+
+                <input type="text" name="category" placeholder="التصنيف (مثلاً: لابتوب)"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
+
                 <input type="text" name="manufacturer" placeholder="الشركة المصنعة"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+
+                <input type="text" name="model_type" placeholder="الموديل / النوع (مثلاً: Pro 15)"
+                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+
                 <input type="number" name="quantity" placeholder="الكمية"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
+
                 <input type="text" name="serial_number" placeholder="الرقم التسلسلي (اختياري)"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+
                 <input type="text" name="reciever" placeholder="اسم المستلم"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
+
                 <input type="datetime-local" name="added_at"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none text-right" required>
 
-                <button type="submit" class="bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700 transition">
+                <textarea name="description" placeholder="ملاحظات أو وصف إضافي..." rows="2"
+                    class="col-span-1 md:col-span-4 border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"></textarea>
+
+                <button type="submit"
+                    class="col-span-1 md:col-span-4 bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700 transition shadow-lg">
                     + إضافة للمخزون
                 </button>
             </form>
@@ -96,19 +111,30 @@
                                     {{ $product->current_stock }} / {{ $product->quantity }}
                                 </span>
                             </td>
-                            <td class="p-4">
+                            <td class="p-4 flex items-center gap-2">
+                                <button onclick="openModal(this)"
+                                    class="bg-blue-100 text-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-200 transition font-bold"
+                                    data-name="{{ $product->name }}" data-category="{{ $product->category }}"
+                                    data-manufacturer="{{ $product->manufacturer ?? 'غير محدد' }}"
+                                    data-model="{{ $product->model_type ?? 'غير محدد' }}"
+                                    data-receiver="{{ $product->reciever }}" data-date="{{ $product->added_at }}"
+                                    data-desc="{{ $product->description ?? 'لا يوجد وصف' }}"
+                                    data-sn="{{ $product->serial_number ?? 'لا يوجد' }}">
+                                    👁️ عرض
+                                </button>
+
                                 @if($product->current_stock > 0)
                                     <form action="{{ route('storage.out') }}" method="POST" class="flex items-center gap-2">
                                         @csrf
                                         <input type="hidden" name="product_in_id" value="{{ $product->id }}">
                                         <input type="hidden" name="date" value="{{ now() }}">
                                         <input type="number" name="quantity" placeholder="العدد"
-                                            class="w-20 border p-1 rounded text-sm text-center"
+                                            class="w-16 border p-1 rounded text-sm text-center"
                                             max="{{ $product->current_stock }}" min="1" required>
                                         <input type="text" name="destination" placeholder="الوجهة"
-                                            class="w-32 border p-1 rounded text-sm" required>
+                                            class="w-24 border p-1 rounded text-sm" required>
                                         <button type="submit"
-                                            class="bg-red-500 text-white px-4 py-1 rounded text-sm hover:bg-red-600 transition shadow">سحب</button>
+                                            class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition shadow">سحب</button>
                                     </form>
                                 @else
                                     <span class="text-gray-400 text-sm font-bold">نفذت الكمية</span>
@@ -124,6 +150,54 @@
                     لا توجد عناصر مطابقة للبحث.
                 </div>
             @endif
+        </div>
+    </div>
+
+    <div id="details-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg p-6 relative transform transition-all scale-100">
+
+            <div class="border-b pb-3 mb-4 flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800" id="modal-title">تفاصيل العنصر</h3>
+                <button onclick="closeModal()"
+                    class="text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-right">
+                <div>
+                    <p class="text-sm text-gray-500">التصنيف</p>
+                    <p class="font-bold text-gray-800" id="modal-category">...</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">الشركة المصنعة</p>
+                    <p class="font-bold text-gray-800" id="modal-manufacturer">...</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">الموديل / النوع</p>
+                    <p class="font-bold text-gray-800" id="modal-model">...</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">الرقم التسلسلي</p>
+                    <p class="font-mono font-bold text-blue-600" id="modal-sn">...</p>
+                </div>
+                <div class="col-span-2 border-t pt-3 mt-2">
+                    <p class="text-sm text-gray-500">تم الاستلام بواسطة</p>
+                    <p class="font-bold text-gray-800" id="modal-receiver">...</p>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-500">تاريخ الإضافة</p>
+                    <p class="font-bold text-gray-800" id="modal-date">...</p>
+                </div>
+                <div class="col-span-2 bg-gray-50 p-3 rounded">
+                    <p class="text-sm text-gray-500">ملاحظات / وصف</p>
+                    <p class="text-gray-700" id="modal-desc">...</p>
+                </div>
+            </div>
+
+            <div class="mt-6 text-left">
+                <button onclick="closeModal()"
+                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 font-bold">إغلاق</button>
+            </div>
         </div>
     </div>
 
@@ -165,6 +239,43 @@
                     })
                     .catch(err => console.error('Error fetching search results:', err));
             }, 1000); // 1000ms = 1 Second
+        });
+
+        // --- MODAL LOGIC ---
+        function openModal(button) {
+            // 1. Get data from the clicked button
+            const name = button.getAttribute('data-name');
+            const category = button.getAttribute('data-category');
+            const manufacturer = button.getAttribute('data-manufacturer');
+            const model = button.getAttribute('data-model');
+            const receiver = button.getAttribute('data-receiver');
+            const date = button.getAttribute('data-date');
+            const desc = button.getAttribute('data-desc');
+            const sn = button.getAttribute('data-sn');
+
+            // 2. Fill the Modal HTML elements
+            document.getElementById('modal-title').innerText = name;
+            document.getElementById('modal-category').innerText = category;
+            document.getElementById('modal-manufacturer').innerText = manufacturer;
+            document.getElementById('modal-model').innerText = model;
+            document.getElementById('modal-receiver').innerText = receiver;
+            document.getElementById('modal-date').innerText = date;
+            document.getElementById('modal-desc').innerText = desc;
+            document.getElementById('modal-sn').innerText = sn;
+
+            // 3. Show the modal
+            document.getElementById('details-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('details-modal').classList.add('hidden');
+        }
+
+        // Close modal if user clicks outside the white box
+        document.getElementById('details-modal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
         });
     </script>
 </body>
