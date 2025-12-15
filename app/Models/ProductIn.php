@@ -8,6 +8,10 @@ class ProductIn extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'added_at' => 'datetime',
+    ];
+    
     // Relationship: One batch can have many removals
     public function outs()
     {

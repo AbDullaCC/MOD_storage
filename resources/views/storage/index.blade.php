@@ -19,7 +19,13 @@
 <body class="bg-gray-100 p-10">
 
     <div class="max-w-[95%] mx-auto">
-        <h1 class="text-3xl font-bold mb-5 text-gray-800">📦 نظام إدارة المخزون</h1>
+        <div class="flex justify-between items-center mb-5">
+            <h1 class="text-3xl font-bold text-gray-800">📦 نظام إدارة المخزون</h1>
+            <a href="{{ route('storage.report') }}"
+                class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center gap-2 transition">
+                <span>📄 التقارير والسجلات</span>
+            </a>
+        </div>
 
         @if(session('success'))
             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">

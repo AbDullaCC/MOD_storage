@@ -20,3 +20,4 @@ Route::get('/', function () {
 Route::get('/storage', [StorageController::class, 'index'])->name('storage.index');
 Route::post('/storage', [StorageController::class, 'store'])->name('storage.store'); // Add Item
 Route::post('/storage/out', [StorageController::class, 'storeOut'])->name('storage.out'); // Remove Item
+Route::get('/storage/report', [StorageController::class, 'report'])->name('storage.report');

@@ -8,6 +8,10 @@ class Out extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'date' => 'datetime',
+    ];
+    
     public function productIn()
     {
         return $this->belongsTo(ProductIn::class);
