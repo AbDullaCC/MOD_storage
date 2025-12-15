@@ -7,7 +7,6 @@
     <title>نظام إدارة المخزون</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
@@ -48,8 +47,7 @@
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
                 <input type="number" name="quantity" placeholder="الكمية"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-                <input type="text" name="serial_number"
-                    placeholder="الرقم التسلسلي (يمكن تركه فارغاً بحالة كانت الكمية اكبر من 1)"
+                <input type="text" name="serial_number" placeholder="الرقم التسلسلي (اختياري)"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
                 <input type="text" name="reciever" placeholder="اسم المستلم"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
@@ -62,15 +60,17 @@
             </form>
         </div>
 
-        <form method="GET" class="mb-6">
+        <form method="GET" class="mb-6" id="search-form">
             <div class="relative text-gray-600 focus-within:text-gray-400">
-                <input type="text" name="search" placeholder="بحث بالاسم، الرقم التسلسلي، أو التصنيف..."
+                <input type="text" name="search" id="search-input"
+                    placeholder="بحث بالاسم، الرقم التسلسلي، أو التصنيف..."
                     class="w-full border p-3 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value="{{ request('search') }}">
             </div>
         </form>
 
-        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div id="results-container"
+            class="bg-white shadow-lg rounded-lg overflow-hidden transition-opacity duration-200">
             <table class="w-full text-right">
                 <thead class="bg-gray-200 text-gray-700">
                     <tr>
@@ -102,17 +102,13 @@
                                         @csrf
                                         <input type="hidden" name="product_in_id" value="{{ $product->id }}">
                                         <input type="hidden" name="date" value="{{ now() }}">
-
                                         <input type="number" name="quantity" placeholder="العدد"
                                             class="w-20 border p-1 rounded text-sm text-center"
                                             max="{{ $product->current_stock }}" min="1" required>
                                         <input type="text" name="destination" placeholder="الوجهة"
                                             class="w-32 border p-1 rounded text-sm" required>
-
                                         <button type="submit"
-                                            class="bg-red-500 text-white px-4 py-1 rounded text-sm hover:bg-red-600 transition shadow">
-                                            سحب
-                                        </button>
+                                            class="bg-red-500 text-white px-4 py-1 rounded text-sm hover:bg-red-600 transition shadow">سحب</button>
                                     </form>
                                 @else
                                     <span class="text-gray-400 text-sm font-bold">نفذت الكمية</span>
@@ -130,6 +126,47 @@
             @endif
         </div>
     </div>
+
+    <script>
+        const searchInput = document.getElementById('search-input');
+        const resultsContainer = document.getElementById('results-container');
+        let timeout = null;
+
+        searchInput.addEventListener('input', function () {
+            // Clear the previous timer (this resets the 1-second countdown)
+            clearTimeout(timeout);
+
+            // Visual feedback: dim the table slightly while waiting
+            resultsContainer.style.opacity = '0.5';
+
+            // Start a new 1-second timer
+            timeout = setTimeout(() => {
+                const query = searchInput.value;
+
+                // Update the browser URL without reloading (so if they refresh, the search stays)
+                const url = new URL(window.location);
+                url.searchParams.set('search', query);
+                window.history.pushState({}, '', url);
+
+                // Fetch the new data from the server
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        // Parse the HTML response
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+
+                        // Extract the new table and put it in our current page
+                        const newContainer = doc.getElementById('results-container').innerHTML;
+                        resultsContainer.innerHTML = newContainer;
+
+                        // Restore opacity
+                        resultsContainer.style.opacity = '1';
+                    })
+                    .catch(err => console.error('Error fetching search results:', err));
+            }, 1000); // 1000ms = 1 Second
+        });
+    </script>
 </body>
 
 </html>
