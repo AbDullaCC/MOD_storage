@@ -99,11 +99,12 @@
                                 <div class="flex items-center gap-2">
                                     <button onclick="openDetailsModal(this)"
                                         class="text-blue-500 hover:text-blue-700 bg-blue-50 p-1 rounded-full"
-                                        title="عرض التفاصيل" data-name="{{ $product->name }}"
+                                        title="عرض التفاصيل" data-id="{{ $product->id }}" data-name="{{ $product->name }}"
                                         data-category="{{ $product->category }}"
                                         data-manufacturer="{{ $product->manufacturer ?? 'غير محدد' }}"
                                         data-model="{{ $product->model_type ?? 'غير محدد' }}"
-                                        data-receiver="{{ $product->reciever }}" data-date="{{ $product->added_at }}"
+                                        data-receiver="{{ $product->reciever }}"
+                                        data-date="{{ $product->added_at->format('Y-m-d H:i') }}"
                                         data-desc="{{ $product->description ?? 'لا يوجد وصف' }}"
                                         data-sn="{{ $product->serial_number ?? 'لا يوجد' }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -166,13 +167,14 @@
     <div id="details-modal"
         class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center backdrop-blur-sm"
         onclick="closeDetailsModal(event)">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg p-6 relative">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
             <div class="border-b pb-3 mb-4 flex justify-between items-center">
                 <h3 class="text-2xl font-bold text-gray-800" id="modal-title">...</h3>
                 <button onclick="document.getElementById('details-modal').classList.add('hidden')"
                     class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
             </div>
-            <div class="grid grid-cols-2 gap-4 text-right">
+
+            <div class="grid grid-cols-2 gap-4 text-right mb-6">
                 <div>
                     <p class="text-sm text-gray-500">التصنيف</p>
                     <p class="font-bold text-gray-800" id="modal-category">...</p>
@@ -202,6 +204,27 @@
                     <p class="text-gray-700" id="modal-desc">...</p>
                 </div>
             </div>
+
+            <div class="border-t pt-4">
+                <h4 class="text-lg font-bold text-gray-800 mb-2">📜 سجل المسحوبات (التاريخ)</h4>
+                <div class="bg-gray-50 rounded border overflow-hidden">
+                    <table class="w-full text-right text-sm">
+                        <thead class="bg-gray-200 text-gray-700">
+                            <tr>
+                                <th class="p-2">التاريخ</th>
+                                <th class="p-2">الكمية</th>
+                                <th class="p-2">الوجهة</th>
+                                <th class="p-2">ملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-history-body">
+                        </tbody>
+                    </table>
+                    <p id="modal-no-history" class="text-center p-4 text-gray-500 hidden">لا توجد عمليات سحب لهذا
+                        العنصر.</p>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -253,6 +276,12 @@
     </div>
 
     <script>
+        // 1. Pass the History Data from Laravel to JS
+        // We create a Map: Product ID -> Array of Outs
+        const historyData = @json($products->mapWithKeys(function ($item) {
+            return [$item->id => $item->outs];
+        }));
+
         document.addEventListener("DOMContentLoaded", function () {
             const searchInput = document.getElementById('search-input');
             const resultsContainer = document.getElementById('results-container');
@@ -265,22 +294,20 @@
                         const url = new URL(window.location);
                         url.searchParams.set('search', searchInput.value);
                         window.history.pushState({}, '', url);
-                        fetch(url)
-                            .then(response => response.text())
-                            .then(html => {
-                                const parser = new DOMParser();
-                                const doc = parser.parseFromString(html, 'text/html');
-                                const newContent = doc.getElementById('results-container');
-                                if (newContent) resultsContainer.innerHTML = newContent.innerHTML;
-                                resultsContainer.style.opacity = '1';
-                            })
-                            .catch(err => { console.error(err); resultsContainer.style.opacity = '1'; });
+                        fetch(url).then(r => r.text()).then(html => {
+                            const doc = new DOMParser().parseFromString(html, 'text/html');
+                            const newContent = doc.getElementById('results-container');
+                            if (newContent) resultsContainer.innerHTML = newContent.innerHTML;
+                            resultsContainer.style.opacity = '1';
+                        });
                     }, 500);
                 });
             }
         });
 
+        // --- UPDATED DETAILS MODAL LOGIC ---
         function openDetailsModal(button) {
+            // 1. Fill Static Data
             document.getElementById('modal-title').innerText = button.getAttribute('data-name');
             document.getElementById('modal-category').innerText = button.getAttribute('data-category');
             document.getElementById('modal-manufacturer').innerText = button.getAttribute('data-manufacturer');
@@ -289,6 +316,36 @@
             document.getElementById('modal-date').innerText = button.getAttribute('data-date');
             document.getElementById('modal-desc').innerText = button.getAttribute('data-desc');
             document.getElementById('modal-sn').innerText = button.getAttribute('data-sn');
+
+            // 2. Build History Table
+            const productId = button.getAttribute('data-id');
+            const transactions = historyData[productId] || [];
+            const tbody = document.getElementById('modal-history-body');
+            const noHistoryMsg = document.getElementById('modal-no-history');
+
+            tbody.innerHTML = ''; // Clear previous data
+
+            if (transactions.length > 0) {
+                noHistoryMsg.classList.add('hidden');
+                transactions.forEach(trans => {
+                    // Format Date (assuming ISO string from DB)
+                    const dateObj = new Date(trans.date);
+                    const dateStr = dateObj.toLocaleDateString('ar-EG') + ' ' + dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+                    const row = `
+                    <tr class="border-b border-gray-100 hover:bg-white">
+                        <td class="p-2 text-gray-600 dir-ltr text-right">${dateStr}</td>
+                        <td class="p-2 font-bold text-red-600">-${trans.quantity}</td>
+                        <td class="p-2 text-gray-800">${trans.destination}</td>
+                        <td class="p-2 text-gray-500 text-xs">${trans.note || '-'}</td>
+                    </tr>
+                `;
+                    tbody.innerHTML += row;
+                });
+            } else {
+                noHistoryMsg.classList.remove('hidden');
+            }
+
             document.getElementById('details-modal').classList.remove('hidden');
         }
 
@@ -296,6 +353,7 @@
             if (e.target.id === 'details-modal') document.getElementById('details-modal').classList.add('hidden');
         }
 
+        // ... Keep Remove Modal Logic Same as Before ...
         function openRemoveModal(id, name, maxStock) {
             document.getElementById('remove-id').value = id;
             document.getElementById('remove-item-name').innerText = name;

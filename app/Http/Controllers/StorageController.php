@@ -9,11 +9,14 @@ use Illuminate\Http\Request;
 class StorageController extends Controller
 {
     // Show the dashboard / list
-    public function index(Request $request)
+   public function index(Request $request)
     {
-        $query = ProductIn::with('outs');
+        // Change 'with('outs')' to this:
+        $query = ProductIn::with(['outs' => function($q) {
+            $q->orderBy('date', 'desc'); // Sort history by newest
+        }]);
 
-        // Search Logic
+        // ... keep the search logic same as before ...
         if ($request->has('search')) {
             $search = $request->get('search');
             $query->where('name', 'like', "%{$search}%")
@@ -21,7 +24,7 @@ class StorageController extends Controller
                   ->orWhere('category', 'like', "%{$search}%");
         }
 
-        $products = $query->latest()->get();
+        $products = $query->latest('added_at')->get();
 
         return view('storage.index', compact('products'));
     }
