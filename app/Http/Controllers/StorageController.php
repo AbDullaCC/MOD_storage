@@ -33,49 +33,50 @@ class StorageController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            // REQUIRED FIELDS
             'name' => 'required',
             'category' => 'required',
             'quantity' => 'required|integer|min:1',
-            'reciever' => 'required',
-            // CONSTRAINT ADDED: Cannot be in the future
-            'added_at' => 'required|date|before_or_equal:now', 
+            'added_at' => 'required|date|before_or_equal:now',
+            
+            // OPTIONAL FIELDS (Nullable)
+            'reciever' => 'nullable', 
             'serial_number' => 'nullable|unique:product_ins,serial_number',
+            'manufacturer' => 'nullable',
+            'model_type' => 'nullable',
+            'description' => 'nullable',
         ], [
-            // Custom Error Message in Arabic
             'added_at.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ في المستقبل!'
         ]);
 
-        ProductIn::create($validated + [
-            'manufacturer' => $request->manufacturer,
-            'model_type' => $request->model_type,
-            'description' => $request->description,
-        ]);
+        ProductIn::create($validated);
 
         return back()->with('success', 'تمت إضافة العنصر بنجاح!');
     }
 
-    // Remove item from storage
+    // 2. REMOVE ITEM
     public function storeOut(Request $request)
     {
         $validated = $request->validate([
+            // REQUIRED FIELDS
             'product_in_id' => 'required|exists:product_ins,id',
             'quantity' => 'required|integer|min:1',
-            'destination' => 'required',
-            // CONSTRAINT ADDED: Cannot be in the future
             'date' => 'required|date|before_or_equal:now',
+
+            // OPTIONAL FIELDS
+            'destination' => 'nullable', 
+            'note' => 'nullable',
         ], [
-            // Custom Error Message in Arabic
             'date.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ سحب في المستقبل!'
         ]);
 
         $product = ProductIn::find($request->product_in_id);
 
-        // Validation: Don't remove more than we have!
         if ($validated['quantity'] > $product->current_stock) {
             return back()->with('error', 'خطأ: الكمية المطلوبة غير متوفرة في المخزون!');
         }
 
-        Out::create($validated + ['note' => $request->note]);
+        Out::create($validated);
 
         return back()->with('success', 'تم سحب العنصر من المخزن بنجاح!');
     }

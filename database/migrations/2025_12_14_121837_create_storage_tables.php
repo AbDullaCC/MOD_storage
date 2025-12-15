@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('quantity'); // Initial quantity
             $table->string('serial_number')->nullable(); // Nullable for bulk items
             
-            $table->string('reciever'); // Who recieved it
+            $table->string('reciever')->nullable();
             $table->text('description')->nullable();
             $table->timestamp('added_at');
             $table->timestamps(); // Created_at, Updated_at

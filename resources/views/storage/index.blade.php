@@ -46,6 +46,7 @@
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
                 <input type="text" name="category" placeholder="التصنيف"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
+
                 <input type="text" name="manufacturer" placeholder="الشركة المصنعة"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
                 <input type="text" name="model_type" placeholder="الموديل / النوع"
@@ -53,14 +54,18 @@
 
                 <input type="number" name="quantity" placeholder="الكمية"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
+
                 <input type="text" name="serial_number" placeholder="الرقم التسلسلي"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
-                <input type="text" name="reciever" placeholder="اسم المستلم"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-                <input type="datetime-local" name="added_at"
+
+                <input type="text" name="reciever" placeholder="اسم المستلم (اختياري)"
+                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+
+                <input type="datetime-local" name="added_at" value="{{ now()->format('Y-m-d\TH:i') }}"
+                    max="{{ now()->format('Y-m-d\TH:i') }}"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none text-right" required>
 
-                <textarea name="description" placeholder="ملاحظات أو وصف إضافي..." rows="2"
+                <textarea name="description" placeholder="ملاحظات..." rows="2"
                     class="col-span-1 md:col-span-4 border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"></textarea>
 
                 <button type="submit"
@@ -247,19 +252,23 @@
                         <input type="number" name="quantity" id="remove-qty" min="1"
                             class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300" required>
                     </div>
+
                     <div>
-                        <label class="block text-sm font-bold text-gray-700">الوجهة (إلى أين؟)</label>
+                        <label class="block text-sm font-bold text-gray-700">الوجهة (اختياري)</label>
                         <input type="text" name="destination"
-                            class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300" required>
+                            class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300">
                     </div>
+
                     <div>
                         <label class="block text-sm font-bold text-gray-700">تاريخ السحب</label>
-                        <input type="datetime-local" name="date"
+                        <input type="datetime-local" name="date" value="{{ now()->format('Y-m-d\TH:i') }}"
+                            max="{{ now()->format('Y-m-d\TH:i') }}"
                             class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300 text-right"
                             required>
                     </div>
+
                     <div>
-                        <label class="block text-sm font-bold text-gray-700">ملاحظات (سبب السحب)</label>
+                        <label class="block text-sm font-bold text-gray-700">ملاحظات</label>
                         <textarea name="note" rows="2"
                             class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300"></textarea>
                     </div>
@@ -367,6 +376,15 @@
         function closeRemoveModal(e) {
             if (e.target.id === 'remove-modal') document.getElementById('remove-modal').classList.add('hidden');
         }
+
+        // Check if there are Laravel errors on page load
+        @if($errors->any())
+            // If there is an error, scroll to the top so the user sees the red alert
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Optional: Alert the user
+            // alert('يوجد خطأ في البيانات المدخلة، يرجى التحقق من الرسالة في أعلى الصفحة.');
+        @endif
     </script>
 </body>
 
