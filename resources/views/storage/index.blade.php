@@ -18,50 +18,39 @@
 
 <body class="bg-gray-100 p-10">
 
-    <div class="max-w-7xl mx-auto">
-
+    <div class="max-w-[95%] mx-auto">
         <h1 class="text-3xl font-bold mb-5 text-gray-800">📦 نظام إدارة المخزون</h1>
 
         @if(session('success'))
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <strong class="font-bold">نجاح!</strong>
-                <span class="block sm:inline">{{ session('success') }}</span>
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+                <strong class="font-bold">نجاح!</strong> <span class="block sm:inline">{{ session('success') }}</span>
             </div>
         @endif
         @if(session('error'))
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <strong class="font-bold">خطأ!</strong>
-                <span class="block sm:inline">{{ session('error') }}</span>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                <strong class="font-bold">خطأ!</strong> <span class="block sm:inline">{{ session('error') }}</span>
             </div>
         @endif
 
         <div class="bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 class="text-xl font-bold mb-4 text-blue-900">📥 إدخال للمخزن (إضافة)</h2>
-
             <form action="{{ route('storage.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 @csrf
-
                 <input type="text" name="name" placeholder="اسم الصنف"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-
-                <input type="text" name="category" placeholder="التصنيف (مثلاً: لابتوب)"
+                <input type="text" name="category" placeholder="التصنيف"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-
                 <input type="text" name="manufacturer" placeholder="الشركة المصنعة"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
-
-                <input type="text" name="model_type" placeholder="الموديل / النوع (مثلاً: Pro 15)"
+                <input type="text" name="model_type" placeholder="الموديل / النوع"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
 
                 <input type="number" name="quantity" placeholder="الكمية"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-
-                <input type="text" name="serial_number" placeholder="الرقم التسلسلي (اختياري)"
+                <input type="text" name="serial_number" placeholder="الرقم التسلسلي"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
-
                 <input type="text" name="reciever" placeholder="اسم المستلم"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-
                 <input type="datetime-local" name="added_at"
                     class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none text-right" required>
 
@@ -69,100 +58,114 @@
                     class="col-span-1 md:col-span-4 border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"></textarea>
 
                 <button type="submit"
-                    class="col-span-1 md:col-span-4 bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700 transition shadow-lg">
-                    + إضافة للمخزون
-                </button>
+                    class="col-span-1 md:col-span-4 bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700 transition shadow-lg">+
+                    إضافة للمخزون</button>
             </form>
         </div>
 
         <form method="GET" class="mb-6" id="search-form">
             <div class="relative text-gray-600 focus-within:text-gray-400">
-                <input type="text" name="search" id="search-input"
-                    placeholder="بحث بالاسم، الرقم التسلسلي، أو التصنيف..."
+                <input type="text" name="search" id="search-input" placeholder="بحث..."
                     class="w-full border p-3 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value="{{ request('search') }}">
             </div>
         </form>
 
         <div id="results-container"
-            class="bg-white shadow-lg rounded-lg overflow-hidden transition-opacity duration-200">
-            <table class="w-full text-right">
-                <thead class="bg-gray-200 text-gray-700">
+            class="bg-white shadow-lg rounded-lg overflow-x-auto transition-opacity duration-200">
+            <table class="w-full text-right whitespace-nowrap">
+                <thead class="bg-gray-200 text-gray-700 text-sm">
                     <tr>
-                        <th class="p-4">الصنف / المصنع</th>
+                        <th class="p-4">الصنف</th>
                         <th class="p-4">التصنيف</th>
-                        <th class="p-4">الرقم التسلسلي (SN)</th>
-                        <th class="p-4">حالة المخزون</th>
-                        <th class="p-4">إخراج مواد (سحب)</th>
+                        <th class="p-4">المصنع</th>
+                        <th class="p-4">الموديل</th>
+                        <th class="p-4">التاريخ</th>
+                        <th class="p-4">الرقم التسلسلي</th>
+                        <th class="p-4">المخزون</th>
+                        <th class="p-4">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($products as $product)
-                        <tr class="hover:bg-blue-50 transition">
+                        <tr class="hover:bg-blue-50 transition text-sm">
                             <td class="p-4">
-                                <div class="font-bold text-gray-800">{{ $product->name }}</div>
-                                <div class="text-xs text-gray-500">{{ $product->manufacturer }}</div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="openDetailsModal(this)"
+                                        class="text-blue-500 hover:text-blue-700 bg-blue-50 p-1 rounded-full"
+                                        title="عرض التفاصيل" data-name="{{ $product->name }}"
+                                        data-category="{{ $product->category }}"
+                                        data-manufacturer="{{ $product->manufacturer ?? 'غير محدد' }}"
+                                        data-model="{{ $product->model_type ?? 'غير محدد' }}"
+                                        data-receiver="{{ $product->reciever }}" data-date="{{ $product->added_at }}"
+                                        data-desc="{{ $product->description ?? 'لا يوجد وصف' }}"
+                                        data-sn="{{ $product->serial_number ?? 'لا يوجد' }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </button>
+                                    <span class="font-bold text-gray-800">{{ $product->name }}</span>
+                                </div>
                             </td>
+
                             <td class="p-4 text-gray-600">{{ $product->category }}</td>
-                            <td class="p-4 text-sm font-mono text-gray-600">{{ $product->serial_number ?? '-' }}</td>
+
+                            <td class="p-4 text-gray-600">{{ $product->manufacturer ?? '-' }}</td>
+
+                            <td class="p-4 text-gray-600">{{ $product->model_type ?? '-' }}</td>
+
+                            <td class="p-4 text-gray-600 dir-ltr">
+                                {{ date('Y-m-d', strtotime($product->added_at)) }}
+                            </td>
+
+                            <td class="p-4 font-mono text-gray-600">{{ $product->serial_number ?? '-' }}</td>
+
                             <td class="p-4">
                                 <span
-                                    class="px-3 py-1 rounded-full text-sm font-bold {{ $product->current_stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                    class="px-3 py-1 rounded-full text-xs font-bold {{ $product->current_stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                     {{ $product->current_stock }} / {{ $product->quantity }}
                                 </span>
                             </td>
-                            <td class="p-4 flex items-center gap-2">
-                                <button onclick="openModal(this)"
-                                    class="bg-blue-100 text-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-200 transition font-bold"
-                                    data-name="{{ $product->name }}" data-category="{{ $product->category }}"
-                                    data-manufacturer="{{ $product->manufacturer ?? 'غير محدد' }}"
-                                    data-model="{{ $product->model_type ?? 'غير محدد' }}"
-                                    data-receiver="{{ $product->reciever }}" data-date="{{ $product->added_at }}"
-                                    data-desc="{{ $product->description ?? 'لا يوجد وصف' }}"
-                                    data-sn="{{ $product->serial_number ?? 'لا يوجد' }}">
-                                    👁️ عرض
-                                </button>
 
+                            <td class="p-4">
                                 @if($product->current_stock > 0)
-                                    <form action="{{ route('storage.out') }}" method="POST" class="flex items-center gap-2">
-                                        @csrf
-                                        <input type="hidden" name="product_in_id" value="{{ $product->id }}">
-                                        <input type="hidden" name="date" value="{{ now() }}">
-                                        <input type="number" name="quantity" placeholder="العدد"
-                                            class="w-16 border p-1 rounded text-sm text-center"
-                                            max="{{ $product->current_stock }}" min="1" required>
-                                        <input type="text" name="destination" placeholder="الوجهة"
-                                            class="w-24 border p-1 rounded text-sm" required>
-                                        <button type="submit"
-                                            class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition shadow">سحب</button>
-                                    </form>
+                                    <button
+                                        onclick="openRemoveModal({{ $product->id }}, '{{ $product->name }}', {{ $product->current_stock }})"
+                                        class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 transition shadow flex items-center gap-1">
+                                        <span>سحب</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25V9m.5-6.75h9M12 18v-5.25m0 0v-5.25m0 5.25H6.75" />
+                                        </svg>
+                                    </button>
                                 @else
-                                    <span class="text-gray-400 text-sm font-bold">نفذت الكمية</span>
+                                    <span class="text-gray-400 text-xs font-bold">نفذت الكمية</span>
                                 @endif
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-
             @if(count($products) == 0)
-                <div class="p-10 text-center text-gray-500">
-                    لا توجد عناصر مطابقة للبحث.
-                </div>
+                <div class="p-10 text-center text-gray-500">لا توجد عناصر مطابقة للبحث.</div>
             @endif
         </div>
     </div>
 
     <div id="details-modal"
-        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg p-6 relative transform transition-all scale-100">
-
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center backdrop-blur-sm"
+        onclick="closeDetailsModal(event)">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg p-6 relative">
             <div class="border-b pb-3 mb-4 flex justify-between items-center">
-                <h3 class="text-2xl font-bold text-gray-800" id="modal-title">تفاصيل العنصر</h3>
-                <button onclick="closeModal()"
-                    class="text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
+                <h3 class="text-2xl font-bold text-gray-800" id="modal-title">...</h3>
+                <button onclick="document.getElementById('details-modal').classList.add('hidden')"
+                    class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
             </div>
-
             <div class="grid grid-cols-2 gap-4 text-right">
                 <div>
                     <p class="text-sm text-gray-500">التصنيف</p>
@@ -173,14 +176,14 @@
                     <p class="font-bold text-gray-800" id="modal-manufacturer">...</p>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">الموديل / النوع</p>
+                    <p class="text-sm text-gray-500">الموديل</p>
                     <p class="font-bold text-gray-800" id="modal-model">...</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">الرقم التسلسلي</p>
                     <p class="font-mono font-bold text-blue-600" id="modal-sn">...</p>
                 </div>
-                <div class="col-span-2 border-t pt-3 mt-2">
+                <div class="col-span-2 border-t pt-2">
                     <p class="text-sm text-gray-500">تم الاستلام بواسطة</p>
                     <p class="font-bold text-gray-800" id="modal-receiver">...</p>
                 </div>
@@ -189,94 +192,117 @@
                     <p class="font-bold text-gray-800" id="modal-date">...</p>
                 </div>
                 <div class="col-span-2 bg-gray-50 p-3 rounded">
-                    <p class="text-sm text-gray-500">ملاحظات / وصف</p>
+                    <p class="text-sm text-gray-500">الوصف</p>
                     <p class="text-gray-700" id="modal-desc">...</p>
                 </div>
-            </div>
-
-            <div class="mt-6 text-left">
-                <button onclick="closeModal()"
-                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 font-bold">إغلاق</button>
             </div>
         </div>
     </div>
 
+    <div id="remove-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center backdrop-blur-sm"
+        onclick="closeRemoveModal(event)">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 relative border-t-4 border-red-500">
+            <div class="mb-4">
+                <h3 class="text-xl font-bold text-red-600">سحب من المخزن</h3>
+                <p class="text-sm text-gray-500">أنت تقوم بسحب: <span id="remove-item-name"
+                        class="font-bold text-black">...</span></p>
+                <p class="text-xs text-gray-400">المتوفر حالياً: <span id="remove-item-stock">0</span></p>
+            </div>
+            <form action="{{ route('storage.out') }}" method="POST">
+                @csrf
+                <input type="hidden" name="product_in_id" id="remove-id">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700">الكمية المراد سحبها</label>
+                        <input type="number" name="quantity" id="remove-qty" min="1"
+                            class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700">الوجهة (إلى أين؟)</label>
+                        <input type="text" name="destination"
+                            class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700">تاريخ السحب</label>
+                        <input type="datetime-local" name="date"
+                            class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300 text-right"
+                            required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700">ملاحظات (سبب السحب)</label>
+                        <textarea name="note" rows="2"
+                            class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300"></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex gap-2">
+                    <button type="submit"
+                        class="flex-1 bg-red-600 text-white py-2 rounded font-bold hover:bg-red-700 transition">تأكيد
+                        السحب</button>
+                    <button type="button" onclick="document.getElementById('remove-modal').classList.add('hidden')"
+                        class="px-4 py-2 bg-gray-200 rounded font-bold hover:bg-gray-300">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-        const searchInput = document.getElementById('search-input');
-        const resultsContainer = document.getElementById('results-container');
-        let timeout = null;
-
-        searchInput.addEventListener('input', function () {
-            // Clear the previous timer (this resets the 1-second countdown)
-            clearTimeout(timeout);
-
-            // Visual feedback: dim the table slightly while waiting
-            resultsContainer.style.opacity = '0.5';
-
-            // Start a new 1-second timer
-            timeout = setTimeout(() => {
-                const query = searchInput.value;
-
-                // Update the browser URL without reloading (so if they refresh, the search stays)
-                const url = new URL(window.location);
-                url.searchParams.set('search', query);
-                window.history.pushState({}, '', url);
-
-                // Fetch the new data from the server
-                fetch(url)
-                    .then(response => response.text())
-                    .then(html => {
-                        // Parse the HTML response
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-
-                        // Extract the new table and put it in our current page
-                        const newContainer = doc.getElementById('results-container').innerHTML;
-                        resultsContainer.innerHTML = newContainer;
-
-                        // Restore opacity
-                        resultsContainer.style.opacity = '1';
-                    })
-                    .catch(err => console.error('Error fetching search results:', err));
-            }, 1000); // 1000ms = 1 Second
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById('search-input');
+            const resultsContainer = document.getElementById('results-container');
+            let timeout = null;
+            if (searchInput && resultsContainer) {
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(timeout);
+                    resultsContainer.style.opacity = '0.5';
+                    timeout = setTimeout(() => {
+                        const url = new URL(window.location);
+                        url.searchParams.set('search', searchInput.value);
+                        window.history.pushState({}, '', url);
+                        fetch(url)
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newContent = doc.getElementById('results-container');
+                                if (newContent) resultsContainer.innerHTML = newContent.innerHTML;
+                                resultsContainer.style.opacity = '1';
+                            })
+                            .catch(err => { console.error(err); resultsContainer.style.opacity = '1'; });
+                    }, 500);
+                });
+            }
         });
 
-        // --- MODAL LOGIC ---
-        function openModal(button) {
-            // 1. Get data from the clicked button
-            const name = button.getAttribute('data-name');
-            const category = button.getAttribute('data-category');
-            const manufacturer = button.getAttribute('data-manufacturer');
-            const model = button.getAttribute('data-model');
-            const receiver = button.getAttribute('data-receiver');
-            const date = button.getAttribute('data-date');
-            const desc = button.getAttribute('data-desc');
-            const sn = button.getAttribute('data-sn');
-
-            // 2. Fill the Modal HTML elements
-            document.getElementById('modal-title').innerText = name;
-            document.getElementById('modal-category').innerText = category;
-            document.getElementById('modal-manufacturer').innerText = manufacturer;
-            document.getElementById('modal-model').innerText = model;
-            document.getElementById('modal-receiver').innerText = receiver;
-            document.getElementById('modal-date').innerText = date;
-            document.getElementById('modal-desc').innerText = desc;
-            document.getElementById('modal-sn').innerText = sn;
-
-            // 3. Show the modal
+        function openDetailsModal(button) {
+            document.getElementById('modal-title').innerText = button.getAttribute('data-name');
+            document.getElementById('modal-category').innerText = button.getAttribute('data-category');
+            document.getElementById('modal-manufacturer').innerText = button.getAttribute('data-manufacturer');
+            document.getElementById('modal-model').innerText = button.getAttribute('data-model');
+            document.getElementById('modal-receiver').innerText = button.getAttribute('data-receiver');
+            document.getElementById('modal-date').innerText = button.getAttribute('data-date');
+            document.getElementById('modal-desc').innerText = button.getAttribute('data-desc');
+            document.getElementById('modal-sn').innerText = button.getAttribute('data-sn');
             document.getElementById('details-modal').classList.remove('hidden');
         }
 
-        function closeModal() {
-            document.getElementById('details-modal').classList.add('hidden');
+        function closeDetailsModal(e) {
+            if (e.target.id === 'details-modal') document.getElementById('details-modal').classList.add('hidden');
         }
 
-        // Close modal if user clicks outside the white box
-        document.getElementById('details-modal').addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeModal();
-            }
-        });
+        function openRemoveModal(id, name, maxStock) {
+            document.getElementById('remove-id').value = id;
+            document.getElementById('remove-item-name').innerText = name;
+            document.getElementById('remove-item-stock').innerText = maxStock;
+            const qtyInput = document.getElementById('remove-qty');
+            qtyInput.max = maxStock;
+            qtyInput.value = 1;
+            document.getElementById('remove-modal').classList.remove('hidden');
+        }
+
+        function closeRemoveModal(e) {
+            if (e.target.id === 'remove-modal') document.getElementById('remove-modal').classList.add('hidden');
+        }
     </script>
 </body>
 
