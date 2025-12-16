@@ -157,6 +157,9 @@
                     @endforelse
                 </tbody>
             </table>
+            <div class="p-4 dir-ltr no-print" dir="ltr">
+                {{ $transactions->links() }}
+            </div>
         </div>
 
         <div class="mt-4 text-left text-gray-500 text-sm">

@@ -5,29 +5,30 @@ namespace App\Http\Controllers;
 use App\Models\ProductIn;
 use App\Models\Out;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class StorageController extends Controller
 {
     // Show the dashboard / list
    public function index(Request $request)
-    {
-        // Change 'with('outs')' to this:
-        $query = ProductIn::with(['outs' => function($q) {
-            $q->orderBy('date', 'desc'); // Sort history by newest
-        }]);
+{
+    $query = ProductIn::with(['outs' => function($q) {
+        $q->orderBy('date', 'desc');
+    }]);
 
-        // ... keep the search logic same as before ...
-        if ($request->has('search')) {
-            $search = $request->get('search');
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('serial_number', 'like', "%{$search}%")
-                  ->orWhere('category', 'like', "%{$search}%");
-        }
-
-        $products = $query->latest('added_at')->get();
-
-        return view('storage.index', compact('products'));
+    if ($request->has('search')) {
+        $search = $request->get('search');
+        $query->where('name', 'like', "%{$search}%")
+              ->orWhere('serial_number', 'like', "%{$search}%")
+              ->orWhere('category', 'like', "%{$search}%");
     }
+
+    // CHANGED: get() -> paginate(20)
+    // withQueryString() ensures filters stay when you click "Page 2"
+    $products = $query->latest('added_at')->paginate(20)->withQueryString();
+
+    return view('storage.index', compact('products'));
+}
 
     // Add a new item to storage
     public function store(Request $request)
@@ -135,7 +136,7 @@ class StorageController extends Controller
         $out->delete(); // Stock is automatically recalculated
         return back()->with('success', 'تم إلغاء عملية السحب واسترجاع الكمية للمخزن.');
     }
-    
+
     // --- REPORT METHOD ---
     public function report(Request $request)
     {
@@ -211,7 +212,20 @@ class StorageController extends Controller
         }
 
         // 4. Merge and Sort
-        $transactions = $ins->concat($outs)->sortByDesc('date');
+        $allTransactions = $ins->concat($outs)->sortByDesc('date');
+
+        // 2. Manual Pagination Logic
+    $perPage = 20; // Items per page
+    $currentPage = LengthAwarePaginator::resolveCurrentPage();
+    $currentItems = $allTransactions->slice(($currentPage - 1) * $perPage, $perPage)->all();
+
+    $transactions = new LengthAwarePaginator(
+        $currentItems,
+        $allTransactions->count(),
+        $perPage,
+        $currentPage,
+        ['path' => $request->url(), 'query' => $request->query()] // Keeps the filters in the URL
+    );
 
         return view('storage.report', compact('transactions', 'dateInputs', 'typeFilter', 'querySearch'));
     }

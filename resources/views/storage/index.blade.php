@@ -147,6 +147,8 @@
             </table>
             @if(count($products) == 0)
             <div class="p-10 text-center text-gray-500">لا توجد نتائج.</div> @endif
+            <div class="p-4 dir-ltr" dir="ltr"> {{ $products->links() }}
+            </div>
         </div>
     </div>
 
