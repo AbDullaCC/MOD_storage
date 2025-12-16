@@ -81,6 +81,61 @@ class StorageController extends Controller
         return back()->with('success', 'تم سحب العنصر من المخزن بنجاح!');
     }
 
+    // --- UPDATE/DELETE ITEMS ---
+
+    public function updateItem(Request $request, $id)
+    {
+        $item = ProductIn::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required',
+            'category' => 'required',
+            'added_at' => 'required|date|before_or_equal:now',
+            'reciever' => 'nullable',
+            'manufacturer' => 'nullable',
+            'model_type' => 'nullable',
+            'serial_number' => 'nullable|unique:product_ins,serial_number,'.$item->id, // Ignore self for unique check
+            'description' => 'nullable',
+        ]);
+
+        // Note: We deliberately do NOT update 'quantity' here.
+        $item->update($validated);
+
+        return back()->with('success', 'تم تعديل بيانات العنصر بنجاح!');
+    }
+
+    public function destroyItem($id)
+    {
+        $item = ProductIn::findOrFail($id);
+        $item->delete(); // This deletes the item AND all its removal history
+        return back()->with('success', 'تم حذف العنصر وجميع سجلاته نهائياً.');
+    }
+
+    // --- UPDATE/DELETE REMOVALS ---
+
+    public function updateOut(Request $request, $id)
+    {
+        $out = Out::findOrFail($id);
+
+        $validated = $request->validate([
+            'date' => 'required|date|before_or_equal:now',
+            'destination' => 'nullable',
+            'note' => 'nullable',
+        ]);
+
+        // Quantity is excluded from update
+        $out->update($validated);
+
+        return back()->with('success', 'تم تعديل بيانات السحب بنجاح.');
+    }
+
+    public function destroyOut($id)
+    {
+        $out = Out::findOrFail($id);
+        $out->delete(); // Stock is automatically recalculated
+        return back()->with('success', 'تم إلغاء عملية السحب واسترجاع الكمية للمخزن.');
+    }
+    
     // --- REPORT METHOD ---
     public function report(Request $request)
     {
