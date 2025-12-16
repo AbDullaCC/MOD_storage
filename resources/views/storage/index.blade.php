@@ -326,18 +326,15 @@
     </div>
 
     <script>
-        // 1. DEFINE THE BASE URL (Fixes the 404 issue)
+        // 1. Base URL
         const APP_URL = "{{ url('/') }}";
 
-        // Pass Data to JS
+        // 2. Data from Controller
         const historyData = @json($products->mapWithKeys(fn($i) => [$i->id => $i->outs]));
-
-        // Active Item Data (for Edit Modal)
         let currentItemData = {};
 
-        // 1. Open Details Logic
+        // --- OPEN DETAILS MODAL ---
         function openDetailsModal(btn) {
-            // Save data for Edit usage
             currentItemData = {
                 id: btn.getAttribute('data-id'),
                 name: btn.getAttribute('data-name'),
@@ -350,7 +347,7 @@
                 desc: btn.getAttribute('data-desc'),
             };
 
-            // Populate Text
+            // Fill Static Data
             document.getElementById('modal-title').innerText = currentItemData.name;
             document.getElementById('modal-category').innerText = currentItemData.category;
             document.getElementById('modal-manufacturer').innerText = currentItemData.manufacturer || '-';
@@ -360,7 +357,7 @@
             document.getElementById('modal-desc').innerText = currentItemData.desc || '-';
             document.getElementById('modal-sn').innerText = currentItemData.sn || '-';
 
-            // Set Delete Action (FIXED with APP_URL)
+            // Set Delete Action
             document.getElementById('delete-item-form').action = `${APP_URL}/storage/item/${currentItemData.id}`;
 
             // Build History Table
@@ -371,18 +368,31 @@
             if (outs.length > 0) {
                 document.getElementById('modal-no-history').classList.add('hidden');
                 outs.forEach(out => {
-                    const dateObj = new Date(out.date);
-                    const dateStr = dateObj.toLocaleDateString('ar-EG') + ' ' + dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                    // 1. Create JS Date Object
+                    const d = new Date(out.date);
 
-                    // FIXED URLs inside this loop
+                    // 2. Format for Display (User Friendly)
+                    const displayDate = d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+                    // 3. Format for Input Value (Strict: YYYY-MM-DDTHH:MM)
+                    // We manually build strings to avoid Timezone shifts causing issues
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const mins = String(d.getMinutes()).padStart(2, '0');
+                    const inputDate = `${year}-${month}-${day}T${hours}:${mins}`;
+
                     const row = `
                     <tr class="border-b border-gray-100 hover:bg-white group">
-                        <td class="p-2 text-gray-600 dir-ltr text-right">${dateStr}</td>
+                        <td class="p-2 text-gray-600 dir-ltr text-right">${displayDate}</td>
                         <td class="p-2 font-bold text-red-600">-${out.quantity}</td>
                         <td class="p-2 text-gray-800">${out.destination || '-'}</td>
                         <td class="p-2 text-gray-500 text-xs">${out.note || '-'}</td>
                         <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="openEditOutModal(${out.id}, '${out.destination}', '${out.date}', '${out.note}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                            <button onclick="openEditOutModal(${out.id}, '${out.destination}', '${inputDate}', '${out.note}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
                             
                             <form action="${APP_URL}/storage/out/${out.id}" method="POST" onsubmit="return confirm('هل تريد استرجاع هذه الكمية للمخزن؟')">
                                 <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'}">
@@ -396,11 +406,9 @@
             } else {
                 document.getElementById('modal-no-history').classList.remove('hidden');
             }
-
             document.getElementById('details-modal').classList.remove('hidden');
         }
 
-        // 2. Open Edit Item Modal (FIXED URL)
         function openEditItemModal() {
             document.getElementById('edit-item-form').action = `${APP_URL}/storage/item/${currentItemData.id}`;
             document.getElementById('edit-name').value = currentItemData.name;
@@ -409,22 +417,20 @@
             document.getElementById('edit-model').value = currentItemData.model;
             document.getElementById('edit-sn').value = currentItemData.sn;
             document.getElementById('edit-receiver').value = currentItemData.receiver;
-            document.getElementById('edit-date').value = currentItemData.date;
+            document.getElementById('edit-date').value = currentItemData.date; // Ensure this is also formatted similarly if needed
             document.getElementById('edit-desc').value = currentItemData.desc;
-
             document.getElementById('edit-item-modal').classList.remove('hidden');
         }
 
-        // 3. Open Edit Out Modal (FIXED URL)
         function openEditOutModal(id, dest, date, note) {
             document.getElementById('edit-out-form').action = `${APP_URL}/storage/out/${id}`;
             document.getElementById('edit-out-destination').value = dest !== 'null' ? dest : '';
+            // FIX: The 'date' passed here is now the clean 'inputDate' string
             document.getElementById('edit-out-date').value = date;
             document.getElementById('edit-out-note').value = note !== 'null' ? note : '';
             document.getElementById('edit-out-modal').classList.remove('hidden');
         }
 
-        // 4. Remove Modal
         function openRemoveModal(id, name, max) {
             document.getElementById('remove-id').value = id;
             document.getElementById('remove-item-name').innerText = name;
@@ -434,10 +440,9 @@
             document.getElementById('remove-modal').classList.remove('hidden');
         }
 
-        // Utils
         function closeModalIfOutside(e, id) { if (e.target.id === id) document.getElementById(id).classList.add('hidden'); }
 
-        // Live Search (FIXED URL Logic)
+        // Live Search
         const searchInput = document.getElementById('search-input');
         const resultsContainer = document.getElementById('results-container');
         let timeout = null;
@@ -457,7 +462,6 @@
             });
         }
 
-        // Display Error Alert on Load
         @if($errors->any())
             window.scrollTo({ top: 0, behavior: 'smooth' });
         @endif
