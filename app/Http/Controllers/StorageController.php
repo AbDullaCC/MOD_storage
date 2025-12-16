@@ -142,9 +142,11 @@ class StorageController extends Controller
     {
         // 1. Handle "All Time" vs Date Range
         if ($request->has('show_all')) {
-            $start = \Carbon\Carbon::create(2000, 1, 1); // Way back in time
-            $end = now()->endOfDay();
-            $dateInputs = ['start' => '', 'end' => '']; // Clear inputs in UI
+            $start = \Carbon\Carbon::create(2000, 1, 1);
+            $end = \Carbon\Carbon::create(2030, 12, 31); // Future date to catch everything
+            
+            // FIX: We populate the inputs so they persist during search/filter
+            $dateInputs = ['start' => $start->format('Y-m-d'), 'end' => $end->format('Y-m-d')]; 
         } else {
             $start = $request->start_date ? \Carbon\Carbon::parse($request->start_date) : now()->startOfMonth();
             $end = $request->end_date ? \Carbon\Carbon::parse($request->end_date)->endOfDay() : now()->endOfDay();

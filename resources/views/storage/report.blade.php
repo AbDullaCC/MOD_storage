@@ -36,7 +36,7 @@
             <div>
                 <h1 class="text-3xl font-bold text-gray-800">📊 تقرير حركة المخزن</h1>
                 <p class="text-gray-500 mt-1">
-                    @if(empty($dateInputs['start']))
+                    @if($dateInputs['start'] == '2000-01-01')
                         عرض <span class="font-bold text-blue-600">كل السجلات</span> (من البداية)
                     @else
                         الفترة من: <span class="font-bold">{{ $dateInputs['start'] }}</span>
