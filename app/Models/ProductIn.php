@@ -18,10 +18,23 @@ class ProductIn extends Model
         return $this->hasMany(Out::class);
     }
 
+    // Relationship: One item can have many restock additions (batches)
+    public function additions()
+    {
+        return $this->hasMany(Addition::class);
+    }
+
+    // Helper: Total quantity ever added (initial + restocks)
+    public function getTotalInAttribute()
+    {
+        return $this->quantity + (int) $this->additions()->sum('quantity');
+    }
+
     // Helper: Calculate how many are left right now
     public function getCurrentStockAttribute()
     {
-        $totalOut = $this->outs()->sum('quantity');
-        return $this->quantity - $totalOut;
+        $totalOut = (int) $this->outs()->sum('quantity');
+        $totalAdded = (int) $this->additions()->sum('quantity');
+        return $this->quantity + $totalAdded - $totalOut;
     }
 }

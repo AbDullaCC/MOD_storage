@@ -18,8 +18,10 @@ Route::get('/', function () {
 });
 
 Route::get('/storage', [StorageController::class, 'index'])->name('storage.index');
+Route::get('/storage/export', [StorageController::class, 'export'])->name('storage.export');
 Route::post('/storage', [StorageController::class, 'store'])->name('storage.store'); // Add Item
 Route::post('/storage/out', [StorageController::class, 'storeOut'])->name('storage.out'); // Remove Item
+Route::post('/storage/addition', [StorageController::class, 'storeAddition'])->name('storage.addition'); // Add batch to existing item
 Route::get('/storage/report', [StorageController::class, 'report'])->name('storage.report');
 
 // Edit/Delete ITEMS
@@ -29,3 +31,7 @@ Route::delete('/storage/item/{id}', [StorageController::class, 'destroyItem'])->
 // Edit/Delete REMOVALS (Outs)
 Route::put('/storage/out/{id}', [StorageController::class, 'updateOut'])->name('storage.updateOut');
 Route::delete('/storage/out/{id}', [StorageController::class, 'destroyOut'])->name('storage.destroyOut');
+
+// Edit/Delete ADDITIONS (Restocks)
+Route::put('/storage/addition/{id}', [StorageController::class, 'updateAddition'])->name('storage.updateAddition');
+Route::delete('/storage/addition/{id}', [StorageController::class, 'destroyAddition'])->name('storage.destroyAddition');

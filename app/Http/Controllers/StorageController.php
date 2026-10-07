@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProductIn;
+use App\Models\Addition;
 use App\Models\Out;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -12,9 +13,14 @@ class StorageController extends Controller
     // Show the dashboard / list
    public function index(Request $request)
 {
-    $query = ProductIn::with(['outs' => function($q) {
-        $q->orderBy('date', 'desc');
-    }]);
+    $query = ProductIn::with([
+        'outs' => function($q) {
+            $q->orderBy('date', 'desc');
+        },
+        'additions' => function($q) {
+            $q->orderBy('date', 'desc');
+        },
+    ]);
 
     if ($request->has('search')) {
         $search = $request->get('search');
@@ -29,6 +35,62 @@ class StorageController extends Controller
 
     return view('storage.index', compact('products'));
 }
+
+    // Export inventory to CSV (Excel-compatible)
+    public function export(Request $request)
+    {
+        $query = ProductIn::withSum('additions as additions_sum', 'quantity')
+            ->withSum('outs as outs_sum', 'quantity');
+
+        $search = $request->get('search');
+        if (is_string($search) && trim($search) !== '') {
+            $search = trim($search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('serial_number', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $query->latest('added_at')->get();
+
+        // Checkbox: checked by default. Only filter when explicitly set to 0/false.
+        $includeOutOfStock = $request->has('include_out_of_stock')
+            ? $request->boolean('include_out_of_stock')
+            : true;
+
+        $rows = [];
+        foreach ($products as $product) {
+            $remaining = (int) $product->quantity
+                + (int) ($product->additions_sum ?? 0)
+                - (int) ($product->outs_sum ?? 0);
+
+            if (!$includeOutOfStock && $remaining <= 0) {
+                continue;
+            }
+
+            $rows[] = [
+                $product->name,
+                $product->category,
+                $product->model_type ?? '-',
+                $remaining,
+            ];
+        }
+
+        $filename = 'inventory-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM for Excel Arabic support
+            fputcsv($out, ['الصنف', 'التصنيف', 'الموديل', 'الكمية المتبقية']);
+            foreach ($rows as $row) {
+                fputcsv($out, $row);
+            }
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 
     // Add a new item to storage
     public function store(Request $request)
@@ -80,6 +142,25 @@ class StorageController extends Controller
         Out::create($validated);
 
         return back()->with('success', 'تم سحب العنصر من المخزن بنجاح!');
+    }
+
+    // ADD STOCK (new batch to an existing item)
+    public function storeAddition(Request $request)
+    {
+        $validated = $request->validate([
+            'product_in_id' => 'required|exists:product_ins,id',
+            'quantity' => 'required|integer|min:1',
+            'date' => 'required|date|before_or_equal:now',
+
+            'source' => 'nullable',
+            'note' => 'nullable',
+        ], [
+            'date.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ إضافة في المستقبل!'
+        ]);
+
+        Addition::create($validated);
+
+        return back()->with('success', 'تمت إضافة الكمية للمخزون بنجاح!');
     }
 
     // --- UPDATE/DELETE ITEMS ---
@@ -137,6 +218,43 @@ class StorageController extends Controller
         return back()->with('success', 'تم إلغاء عملية السحب واسترجاع الكمية للمخزن.');
     }
 
+    // --- UPDATE/DELETE ADDITIONS ---
+
+    public function updateAddition(Request $request, $id)
+    {
+        $addition = Addition::findOrFail($id);
+
+        $validated = $request->validate([
+            'date' => 'required|date|before_or_equal:now',
+            'source' => 'nullable',
+            'note' => 'nullable',
+        ]);
+
+        // Quantity is excluded from update
+        $addition->update($validated);
+
+        return back()->with('success', 'تم تعديل بيانات الإضافة بنجاح.');
+    }
+
+    public function destroyAddition($id)
+    {
+        $addition = Addition::findOrFail($id);
+
+        $product = $addition->productIn;
+        if ($product) {
+            $stockWithoutThis = $product->quantity
+                + (int) $product->additions()->where('id', '!=', $addition->id)->sum('quantity')
+                - (int) $product->outs()->sum('quantity');
+
+            if ($stockWithoutThis < 0) {
+                return back()->with('error', 'خطأ: لا يمكن حذف هذه الإضافة لأن جزءاً منها تم سحبه من المخزون!');
+            }
+        }
+
+        $addition->delete(); // Stock is automatically recalculated
+        return back()->with('success', 'تم حذف عملية الإضافة بنجاح.');
+    }
+
     // --- REPORT METHOD ---
     public function report(Request $request)
     {
@@ -178,9 +296,37 @@ class StorageController extends Controller
                     'quantity' => $item->quantity,
                     'sn' => $item->serial_number,
                     'party' => $item->reciever, 
-                    'note' => 'إضافة مخزنية',
+                    'note' => 'إضافة مخزنية (رصيد افتتاحي)',
                 ];
             });
+
+            // Restock additions (new batches on existing items)
+            $restocksQuery = Addition::with('productIn')->whereBetween('date', [$start, $end]);
+
+            if ($querySearch) {
+                $restocksQuery->where(function($q) use ($querySearch) {
+                    $q->where('source', 'like', "%$querySearch%")
+                      ->orWhere('note', 'like', "%$querySearch%")
+                      ->orWhereHas('productIn', function($subQ) use ($querySearch) {
+                          $subQ->where('name', 'like', "%$querySearch%")
+                               ->orWhere('serial_number', 'like', "%$querySearch%");
+                      });
+                });
+            }
+
+            $restocks = $restocksQuery->get()->map(function ($item) {
+                return [
+                    'type' => 'in',
+                    'date' => $item->date,
+                    'name' => $item->productIn->name ?? 'عنصر محذوف',
+                    'quantity' => $item->quantity,
+                    'sn' => $item->productIn->serial_number ?? '-',
+                    'party' => $item->source,
+                    'note' => $item->note ?? 'إضافة كمية (دفعة جديدة)',
+                ];
+            });
+
+            $ins = $ins->concat($restocks);
         }
 
         // 3. Fetch OUTs (Removals)

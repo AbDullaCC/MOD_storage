@@ -27,12 +27,22 @@
 
     <div class="max-w-[98%] mx-auto">
 
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
             <h1 class="text-3xl font-bold text-gray-800">📦 نظام إدارة المخزون</h1>
-            <a href="{{ route('storage.report') }}"
-                class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center gap-2 transition font-bold">
-                📄 التقارير
-            </a>
+            <div class="flex items-center gap-2">
+                <label class="bg-white border px-3 py-2 rounded-lg shadow text-sm font-bold text-gray-700 flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="include-out-of-stock" checked class="accent-green-600">
+                    تضمين النافذ
+                </label>
+                <a id="export-btn" href="{{ route('storage.export', request()->only('search')) }}"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow flex items-center gap-2 transition font-bold">
+                    📥 تصدير CSV
+                </a>
+                <a href="{{ route('storage.report') }}"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center gap-2 transition font-bold">
+                    📄 التقارير
+                </a>
+            </div>
         </div>
 
         @if(session('success'))
@@ -127,17 +137,25 @@
                             <td class="p-4">
                                 <span
                                     class="px-3 py-1 rounded-full text-xs font-bold {{ $product->current_stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                    {{ $product->current_stock }} / {{ $product->quantity }}
+                                    {{ $product->current_stock }} / {{ $product->total_in }}
                                 </span>
                             </td>
                             <td class="p-4">
-                                @if($product->current_stock > 0)
+                                <div class="flex items-center gap-1">
                                     <button
-                                        onclick="openRemoveModal({{ $product->id }}, '{{ $product->name }}', {{ $product->current_stock }})"
-                                        class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 transition shadow flex items-center gap-1">
-                                        <span>سحب</span>
+                                        onclick="openAddModal({{ $product->id }}, '{{ addslashes($product->name) }}')"
+                                        class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 transition shadow flex items-center gap-1">
+                                        <span>إضافة</span>
                                     </button>
-                                @else
+                                    @if($product->current_stock > 0)
+                                        <button
+                                            onclick="openRemoveModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->current_stock }})"
+                                            class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 transition shadow flex items-center gap-1">
+                                            <span>سحب</span>
+                                        </button>
+                                    @endif
+                                </div>
+                                @if($product->current_stock <= 0)
                                     <span class="text-gray-400 text-xs font-bold">نفذت الكمية</span>
                                 @endif
                             </td>
@@ -207,6 +225,26 @@
                 <div class="col-span-4 border-t pt-2">
                     <p class="text-xs text-gray-500">وصف</p>
                     <p class="text-gray-700 text-sm" id="modal-desc">...</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h4 class="text-lg font-bold text-gray-800 mb-2 border-r-4 border-green-500 pr-2">📥 سجل الإضافات (دفعات جديدة)</h4>
+                <div class="bg-white border rounded overflow-hidden">
+                    <table class="w-full text-right text-sm">
+                        <thead class="bg-gray-100 text-gray-600">
+                            <tr>
+                                <th class="p-2">التاريخ</th>
+                                <th class="p-2">الكمية</th>
+                                <th class="p-2">المصدر</th>
+                                <th class="p-2">ملاحظات</th>
+                                <th class="p-2 w-20">تحكم</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-additions-body"></tbody>
+                    </table>
+                    <p id="modal-no-additions" class="text-center p-4 text-gray-400 hidden">لا توجد دفعات إضافية لهذا
+                        العنصر.</p>
                 </div>
             </div>
 
@@ -327,13 +365,88 @@
         </div>
     </div>
 
+    <div id="add-modal"
+        class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex justify-center items-center backdrop-blur-sm"
+        onclick="closeModalIfOutside(event, 'add-modal')">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 relative border-t-4 border-green-500">
+            <div class="mb-4">
+                <h3 class="text-xl font-bold text-green-600">إضافة كمية (دفعة جديدة)</h3>
+                <p class="text-sm text-gray-500">العنصر: <span id="add-item-name"
+                        class="font-bold text-black">...</span></p>
+            </div>
+            <form action="{{ route('storage.addition') }}" method="POST" class="space-y-3">
+                @csrf
+                <input type="hidden" name="product_in_id" id="add-id">
+                <input type="number" name="quantity" min="1"
+                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-green-300" required
+                    placeholder="الكمية المضافة" value="1">
+                <input type="text" name="source"
+                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-green-300"
+                    placeholder="المصدر (اختياري)">
+                <input type="datetime-local" name="date" value="{{ now()->format('Y-m-d\TH:i') }}"
+                    max="{{ now()->format('Y-m-d\TH:i') }}"
+                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-green-300 text-right" required>
+                <textarea name="note" rows="2"
+                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-green-300"
+                    placeholder="ملاحظات"></textarea>
+                <div class="mt-6 flex gap-2">
+                    <button type="submit"
+                        class="flex-1 bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700 transition">تأكيد
+                        الإضافة</button>
+                    <button type="button" onclick="document.getElementById('add-modal').classList.add('hidden')"
+                        class="px-4 py-2 bg-gray-200 rounded font-bold hover:bg-gray-300">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-addition-modal"
+        class="fixed inset-0 bg-black bg-opacity-60 hidden z-[60] flex justify-center items-center backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 relative border-t-4 border-yellow-500">
+            <h3 class="text-xl font-bold mb-4">✏️ تعديل عملية الإضافة</h3>
+            <form id="edit-addition-form" method="POST" class="space-y-3">
+                @csrf @method('PUT')
+                <div>
+                    <label class="block text-xs font-bold text-gray-500">المصدر</label>
+                    <input type="text" name="source" id="edit-addition-source" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500">التاريخ</label>
+                    <input type="datetime-local" name="date" id="edit-addition-date"
+                        class="w-full border p-2 rounded text-right" required max="{{ now()->format('Y-m-d\TH:i') }}">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500">ملاحظات</label>
+                    <textarea name="note" id="edit-addition-note" class="w-full border p-2 rounded"></textarea>
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="submit"
+                        class="bg-yellow-500 text-white px-6 py-2 rounded font-bold hover:bg-yellow-600 flex-1">تحديث</button>
+                    <button type="button" onclick="document.getElementById('edit-addition-modal').classList.add('hidden')"
+                        class="bg-gray-200 px-6 py-2 rounded font-bold">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // 1. Base URL
         const APP_URL = "{{ url('/') }}";
 
         // 2. Data from Controller
         const historyData = @json($products->mapWithKeys(fn($i) => [$i->id => $i->outs]));
+        const additionsData = @json($products->mapWithKeys(fn($i) => [$i->id => $i->additions]));
         let currentItemData = {};
+
+        function escJs(s) { return (s ?? '').toString().replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' '); }
+
+        function formatDates(iso) {
+            const d = new Date(iso);
+            const displayDate = d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            const pad = (n) => String(n).padStart(2, '0');
+            const inputDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            return { displayDate, inputDate };
+        }
 
         // --- OPEN DETAILS MODAL ---
         function openDetailsModal(btn) {
@@ -362,6 +475,40 @@
             // Set Delete Action
             document.getElementById('delete-item-form').action = `${APP_URL}/storage/item/${currentItemData.id}`;
 
+            // Build Additions Table
+            const additionsTbody = document.getElementById('modal-additions-body');
+            additionsTbody.innerHTML = '';
+            const additions = additionsData[currentItemData.id] || [];
+
+            if (additions.length > 0) {
+                document.getElementById('modal-no-additions').classList.add('hidden');
+                additions.forEach(add => {
+                    const { displayDate, inputDate } = formatDates(add.date);
+
+                    const row = `
+                    <tr class="border-b border-gray-100 hover:bg-white group">
+                        <td class="p-2 text-gray-600 dir-ltr text-right">${displayDate}</td>
+                        <td class="p-2 font-bold text-green-600">+${add.quantity}</td>
+                        <td class="p-2 text-gray-800">${add.source || '-'}</td>
+                        <td class="p-2 text-gray-500 text-xs">${add.note || '-'}</td>
+                        <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="openEditAdditionModal(${add.id}, '${escJs(add.source)}', '${inputDate}', '${escJs(add.note)}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+
+                            <form action="${APP_URL}/storage/addition/${add.id}" method="POST" onsubmit="return confirm('هل تريد حذف عملية الإضافة هذه؟')">
+                                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'}">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <button type="submit" class="text-red-500 hover:bg-red-100 p-1 rounded" title="حذف الإضافة"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                            </form>
+                        </td>
+                    </tr>`;
+                    additionsTbody.innerHTML += row;
+                });
+            } else {
+                document.getElementById('modal-no-additions').classList.remove('hidden');
+            }
+
             // Build History Table
             const tbody = document.getElementById('modal-history-body');
             tbody.innerHTML = '';
@@ -370,20 +517,7 @@
             if (outs.length > 0) {
                 document.getElementById('modal-no-history').classList.add('hidden');
                 outs.forEach(out => {
-                    // 1. Create JS Date Object
-                    const d = new Date(out.date);
-
-                    // 2. Format for Display (User Friendly)
-                    const displayDate = d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-
-                    // 3. Format for Input Value (Strict: YYYY-MM-DDTHH:MM)
-                    // We manually build strings to avoid Timezone shifts causing issues
-                    const year = d.getFullYear();
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const hours = String(d.getHours()).padStart(2, '0');
-                    const mins = String(d.getMinutes()).padStart(2, '0');
-                    const inputDate = `${year}-${month}-${day}T${hours}:${mins}`;
+                    const { displayDate, inputDate } = formatDates(out.date);
 
                     const row = `
                     <tr class="border-b border-gray-100 hover:bg-white group">
@@ -392,7 +526,7 @@
                         <td class="p-2 text-gray-800">${out.destination || '-'}</td>
                         <td class="p-2 text-gray-500 text-xs">${out.note || '-'}</td>
                         <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="openEditOutModal(${out.id}, '${out.destination}', '${inputDate}', '${out.note}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
+                            <button onclick="openEditOutModal(${out.id}, '${escJs(out.destination)}', '${inputDate}', '${escJs(out.note)}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                             </button>
                             
@@ -433,6 +567,20 @@
             document.getElementById('edit-out-modal').classList.remove('hidden');
         }
 
+        function openEditAdditionModal(id, source, date, note) {
+            document.getElementById('edit-addition-form').action = `${APP_URL}/storage/addition/${id}`;
+            document.getElementById('edit-addition-source').value = source !== 'null' ? source : '';
+            document.getElementById('edit-addition-date').value = date;
+            document.getElementById('edit-addition-note').value = note !== 'null' ? note : '';
+            document.getElementById('edit-addition-modal').classList.remove('hidden');
+        }
+
+        function openAddModal(id, name) {
+            document.getElementById('add-id').value = id;
+            document.getElementById('add-item-name').innerText = name;
+            document.getElementById('add-modal').classList.remove('hidden');
+        }
+
         function openRemoveModal(id, name, max) {
             document.getElementById('remove-id').value = id;
             document.getElementById('remove-item-name').innerText = name;
@@ -444,14 +592,32 @@
 
         function closeModalIfOutside(e, id) { if (e.target.id === id) document.getElementById(id).classList.add('hidden'); }
 
-        // Live Search
+        // Live Search + Export link sync
         const searchInput = document.getElementById('search-input');
         const resultsContainer = document.getElementById('results-container');
+        const exportBtn = document.getElementById('export-btn');
+        const includeOutOfStock = document.getElementById('include-out-of-stock');
+        const EXPORT_BASE = "{{ route('storage.export') }}";
+
+        function syncExportLink(searchValue) {
+            if (!exportBtn) return;
+            const params = new URLSearchParams();
+            const s = searchValue ?? (searchInput ? searchInput.value : '');
+            if (s && s.trim() !== '') params.set('search', s.trim());
+            params.set('include_out_of_stock', includeOutOfStock && includeOutOfStock.checked ? '1' : '0');
+            exportBtn.href = EXPORT_BASE + '?' + params.toString();
+        }
+
+        if (includeOutOfStock) {
+            includeOutOfStock.addEventListener('change', () => syncExportLink());
+        }
+        syncExportLink();
         let timeout = null;
         if (searchInput) {
             searchInput.addEventListener('input', () => {
                 clearTimeout(timeout);
                 resultsContainer.style.opacity = '0.5';
+                syncExportLink(searchInput.value);
                 timeout = setTimeout(() => {
                     const url = new URL(window.location);
                     url.searchParams.set('search', searchInput.value);
