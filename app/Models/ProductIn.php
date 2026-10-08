@@ -2,16 +2,21 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecordsCreator;
 use Illuminate\Database\Eloquent\Model;
 
 class ProductIn extends Model
 {
-    protected $guarded = [];
+    use RecordsCreator;
+
+    protected $guarded = ['created_by', 'created_by_name', 'created_at'];
+
+    protected $appends = ['recorded_by_label', 'recorded_at_display'];
 
     protected $casts = [
         'added_at' => 'datetime',
     ];
-    
+
     // Relationship: One batch can have many removals
     public function outs()
     {
@@ -35,6 +40,7 @@ class ProductIn extends Model
     {
         $totalOut = (int) $this->outs()->sum('quantity');
         $totalAdded = (int) $this->additions()->sum('quantity');
+
         return $this->quantity + $totalAdded - $totalOut;
     }
 }

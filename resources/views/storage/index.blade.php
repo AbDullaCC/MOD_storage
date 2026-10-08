@@ -119,6 +119,8 @@
                                         data-manufacturer="{{ $product->manufacturer }}"
                                         data-model="{{ $product->model_type }}" data-receiver="{{ $product->reciever }}"
                                         data-date="{{ $product->added_at->format('Y-m-d\TH:i') }}"
+                                        data-recorded-by="{{ $product->recorded_by_label }}"
+                                        data-recorded-at="{{ $product->recorded_at_display }}"
                                         data-desc="{{ $product->description }}" data-sn="{{ $product->serial_number }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -176,7 +178,7 @@
         class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex justify-center items-center backdrop-blur-sm"
         onclick="closeModalIfOutside(event, 'details-modal')">
         <div
-            class="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-6 relative max-h-[90vh] overflow-y-auto modal-scroll">
+            class="bg-white rounded-lg shadow-2xl w-full max-w-5xl p-6 relative max-h-[90vh] overflow-y-auto modal-scroll">
 
             <div class="flex justify-between items-start border-b pb-4 mb-4">
                 <div>
@@ -223,10 +225,18 @@
                     <p class="font-bold text-gray-800" id="modal-receiver">...</p>
                 </div>
                 <div class="col-span-2">
-                    <p class="text-xs text-gray-500">تاريخ الإضافة</p>
+                    <p class="text-xs text-gray-500">تاريخ العملية (الرصيد الافتتاحي)</p>
                     <p class="font-bold text-gray-800 dir-ltr text-right" id="modal-date">...</p>
                 </div>
-                <div class="col-span-4 border-t pt-2">
+                <div class="col-span-2">
+                    <p class="text-xs text-gray-500">سجّل الرصيد الافتتاحي</p>
+                    <p class="font-bold text-gray-800" id="modal-recorded-by">...</p>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-xs text-gray-500">وقت التسجيل ({{ config('app.timezone') }})</p>
+                    <p class="font-bold text-gray-800 text-right" dir="ltr" id="modal-recorded-at">...</p>
+                </div>
+                <div class="col-span-2 md:col-span-4 border-t pt-2">
                     <p class="text-xs text-gray-500">وصف</p>
                     <p class="text-gray-700 text-sm" id="modal-desc">...</p>
                 </div>
@@ -234,14 +244,15 @@
 
             <div class="mb-6">
                 <h4 class="text-lg font-bold text-gray-800 mb-2 border-r-4 border-green-500 pr-2">📥 سجل الإضافات (دفعات جديدة)</h4>
-                <div class="bg-white border rounded overflow-hidden">
+                <div class="bg-white border rounded overflow-x-auto">
                     <table class="w-full text-right text-sm">
                         <thead class="bg-gray-100 text-gray-600">
                             <tr>
-                                <th class="p-2">التاريخ</th>
+                                <th class="p-2">تاريخ العملية</th>
                                 <th class="p-2">الكمية</th>
                                 <th class="p-2">المصدر</th>
                                 <th class="p-2">ملاحظات</th>
+                                <th class="p-2">سجّلها / وقت التسجيل</th>
                                 @can('admin')<th class="p-2 w-20">تحكم</th>@endcan
                             </tr>
                         </thead>
@@ -254,14 +265,15 @@
 
             <div>
                 <h4 class="text-lg font-bold text-gray-800 mb-2 border-r-4 border-blue-500 pr-2">📜 سجل المسحوبات</h4>
-                <div class="bg-white border rounded overflow-hidden">
+                <div class="bg-white border rounded overflow-x-auto">
                     <table class="w-full text-right text-sm">
                         <thead class="bg-gray-100 text-gray-600">
                             <tr>
-                                <th class="p-2">التاريخ</th>
+                                <th class="p-2">تاريخ العملية</th>
                                 <th class="p-2">الكمية</th>
                                 <th class="p-2">الوجهة</th>
                                 <th class="p-2">ملاحظات</th>
+                                <th class="p-2">سجّلها / وقت التسجيل</th>
                                 @can('admin')<th class="p-2 w-20">تحكم</th>@endcan
                             </tr>
                         </thead>
@@ -467,6 +479,8 @@
                 receiver: btn.getAttribute('data-receiver'),
                 date: btn.getAttribute('data-date'),
                 desc: btn.getAttribute('data-desc'),
+                recordedBy: btn.getAttribute('data-recorded-by'),
+                recordedAt: btn.getAttribute('data-recorded-at'),
             };
 
             // Fill Static Data
@@ -478,6 +492,8 @@
             document.getElementById('modal-date').innerText = currentItemData.date;
             document.getElementById('modal-desc').innerText = currentItemData.desc || '-';
             document.getElementById('modal-sn').innerText = currentItemData.sn || '-';
+            document.getElementById('modal-recorded-by').innerText = currentItemData.recordedBy;
+            document.getElementById('modal-recorded-at').innerText = currentItemData.recordedAt;
 
             // Set Delete Action
             @can('admin')
@@ -500,6 +516,7 @@
                         <td class="p-2 font-bold text-green-600">+${add.quantity}</td>
                         <td class="p-2 text-gray-800">${escHtml(add.source || '-')}</td>
                         <td class="p-2 text-gray-500 text-xs">${escHtml(add.note || '-')}</td>
+                        <td class="p-2 text-xs"><span class="block font-bold">${escHtml(add.recorded_by_label)}</span><span class="block whitespace-nowrap text-gray-500" dir="ltr">${escHtml(add.recorded_at_display)}</span></td>
                         @can('admin')
                         <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onclick="openEditAdditionModal(${add.id}, '${escJs(add.source)}', '${inputDate}', '${escJs(add.note)}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
@@ -536,6 +553,7 @@
                         <td class="p-2 font-bold text-red-600">-${out.quantity}</td>
                         <td class="p-2 text-gray-800">${escHtml(out.destination || '-')}</td>
                         <td class="p-2 text-gray-500 text-xs">${escHtml(out.note || '-')}</td>
+                        <td class="p-2 text-xs"><span class="block font-bold">${escHtml(out.recorded_by_label)}</span><span class="block whitespace-nowrap text-gray-500" dir="ltr">${escHtml(out.recorded_at_display)}</span></td>
                         @can('admin')
                         <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onclick="openEditOutModal(${out.id}, '${escJs(out.destination)}', '${inputDate}', '${escJs(out.note)}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">

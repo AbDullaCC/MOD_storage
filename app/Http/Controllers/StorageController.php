@@ -2,39 +2,39 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProductIn;
 use App\Models\Addition;
 use App\Models\Out;
+use App\Models\ProductIn;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class StorageController extends Controller
 {
     // Show the dashboard / list
-   public function index(Request $request)
-{
-    $query = ProductIn::with([
-        'outs' => function($q) {
-            $q->orderBy('date', 'desc');
-        },
-        'additions' => function($q) {
-            $q->orderBy('date', 'desc');
-        },
-    ]);
+    public function index(Request $request)
+    {
+        $query = ProductIn::with([
+            'outs' => function ($q) {
+                $q->orderBy('date', 'desc');
+            },
+            'additions' => function ($q) {
+                $q->orderBy('date', 'desc');
+            },
+        ]);
 
-    if ($request->has('search')) {
-        $search = $request->get('search');
-        $query->where('name', 'like', "%{$search}%")
-              ->orWhere('serial_number', 'like', "%{$search}%")
-              ->orWhere('category', 'like', "%{$search}%");
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('serial_number', 'like', "%{$search}%")
+                ->orWhere('category', 'like', "%{$search}%");
+        }
+
+        // CHANGED: get() -> paginate(20)
+        // withQueryString() ensures filters stay when you click "Page 2"
+        $products = $query->latest('added_at')->paginate(20)->withQueryString();
+
+        return view('storage.index', compact('products'));
     }
-
-    // CHANGED: get() -> paginate(20)
-    // withQueryString() ensures filters stay when you click "Page 2"
-    $products = $query->latest('added_at')->paginate(20)->withQueryString();
-
-    return view('storage.index', compact('products'));
-}
 
     // Export inventory to CSV (Excel-compatible)
     public function export(Request $request)
@@ -47,8 +47,8 @@ class StorageController extends Controller
             $search = trim($search);
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('serial_number', 'like', "%{$search}%")
-                  ->orWhere('category', 'like', "%{$search}%");
+                    ->orWhere('serial_number', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%");
             });
         }
 
@@ -65,7 +65,7 @@ class StorageController extends Controller
                 + (int) ($product->additions_sum ?? 0)
                 - (int) ($product->outs_sum ?? 0);
 
-            if (!$includeOutOfStock && $remaining <= 0) {
+            if (! $includeOutOfStock && $remaining <= 0) {
                 continue;
             }
 
@@ -77,7 +77,7 @@ class StorageController extends Controller
             ];
         }
 
-        $filename = 'inventory-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'inventory-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w');
@@ -101,18 +101,18 @@ class StorageController extends Controller
             'category' => 'required',
             'quantity' => 'required|integer|min:1',
             'added_at' => 'required|date|before_or_equal:now',
-            
+
             // OPTIONAL FIELDS (Nullable)
-            'reciever' => 'nullable', 
+            'reciever' => 'nullable',
             'serial_number' => 'nullable|unique:product_ins,serial_number',
             'manufacturer' => 'nullable',
             'model_type' => 'nullable',
             'description' => 'nullable',
         ], [
-            'added_at.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ في المستقبل!'
+            'added_at.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ في المستقبل!',
         ]);
 
-        ProductIn::create($validated);
+        ProductIn::createRecorded($validated, $request->user());
 
         return back()->with('success', 'تمت إضافة العنصر بنجاح!');
     }
@@ -127,10 +127,10 @@ class StorageController extends Controller
             'date' => 'required|date|before_or_equal:now',
 
             // OPTIONAL FIELDS
-            'destination' => 'nullable', 
+            'destination' => 'nullable',
             'note' => 'nullable',
         ], [
-            'date.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ سحب في المستقبل!'
+            'date.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ سحب في المستقبل!',
         ]);
 
         $product = ProductIn::find($request->product_in_id);
@@ -139,7 +139,7 @@ class StorageController extends Controller
             return back()->with('error', 'خطأ: الكمية المطلوبة غير متوفرة في المخزون!');
         }
 
-        Out::create($validated);
+        Out::createRecorded($validated, $request->user());
 
         return back()->with('success', 'تم سحب العنصر من المخزن بنجاح!');
     }
@@ -155,10 +155,10 @@ class StorageController extends Controller
             'source' => 'nullable',
             'note' => 'nullable',
         ], [
-            'date.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ إضافة في المستقبل!'
+            'date.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ إضافة في المستقبل!',
         ]);
 
-        Addition::create($validated);
+        Addition::createRecorded($validated, $request->user());
 
         return back()->with('success', 'تمت إضافة الكمية للمخزون بنجاح!');
     }
@@ -190,6 +190,7 @@ class StorageController extends Controller
     {
         $item = ProductIn::findOrFail($id);
         $item->delete(); // This deletes the item AND all its removal history
+
         return back()->with('success', 'تم حذف العنصر وجميع سجلاته نهائياً.');
     }
 
@@ -215,6 +216,7 @@ class StorageController extends Controller
     {
         $out = Out::findOrFail($id);
         $out->delete(); // Stock is automatically recalculated
+
         return back()->with('success', 'تم إلغاء عملية السحب واسترجاع الكمية للمخزن.');
     }
 
@@ -252,6 +254,7 @@ class StorageController extends Controller
         }
 
         $addition->delete(); // Stock is automatically recalculated
+
         return back()->with('success', 'تم حذف عملية الإضافة بنجاح.');
     }
 
@@ -262,9 +265,9 @@ class StorageController extends Controller
         if ($request->has('show_all')) {
             $start = \Carbon\Carbon::create(2000, 1, 1);
             $end = \Carbon\Carbon::create(2030, 12, 31); // Future date to catch everything
-            
+
             // FIX: We populate the inputs so they persist during search/filter
-            $dateInputs = ['start' => $start->format('Y-m-d'), 'end' => $end->format('Y-m-d')]; 
+            $dateInputs = ['start' => $start->format('Y-m-d'), 'end' => $end->format('Y-m-d')];
         } else {
             $start = $request->start_date ? \Carbon\Carbon::parse($request->start_date) : now()->startOfMonth();
             $end = $request->end_date ? \Carbon\Carbon::parse($request->end_date)->endOfDay() : now()->endOfDay();
@@ -278,13 +281,13 @@ class StorageController extends Controller
         $ins = collect([]);
         if ($typeFilter == 'all' || $typeFilter == 'in') {
             $insQuery = ProductIn::whereBetween('added_at', [$start, $end]);
-            
+
             // Search Logic for Inputs
             if ($querySearch) {
-                $insQuery->where(function($q) use ($querySearch) {
+                $insQuery->where(function ($q) use ($querySearch) {
                     $q->where('name', 'like', "%$querySearch%")
-                      ->orWhere('reciever', 'like', "%$querySearch%")
-                      ->orWhere('serial_number', 'like', "%$querySearch%");
+                        ->orWhere('reciever', 'like', "%$querySearch%")
+                        ->orWhere('serial_number', 'like', "%$querySearch%");
                 });
             }
 
@@ -292,10 +295,13 @@ class StorageController extends Controller
                 return [
                     'type' => 'in',
                     'date' => $item->added_at, // Assumes you added 'datetime' cast to Model
+                    'action_label' => 'رصيد افتتاحي',
+                    'recorded_by' => $item->recorded_by_label,
+                    'recorded_at' => $item->recorded_at_display,
                     'name' => $item->name,
                     'quantity' => $item->quantity,
                     'sn' => $item->serial_number,
-                    'party' => $item->reciever, 
+                    'party' => $item->reciever,
                     'note' => 'إضافة مخزنية (رصيد افتتاحي)',
                 ];
             });
@@ -304,13 +310,13 @@ class StorageController extends Controller
             $restocksQuery = Addition::with('productIn')->whereBetween('date', [$start, $end]);
 
             if ($querySearch) {
-                $restocksQuery->where(function($q) use ($querySearch) {
+                $restocksQuery->where(function ($q) use ($querySearch) {
                     $q->where('source', 'like', "%$querySearch%")
-                      ->orWhere('note', 'like', "%$querySearch%")
-                      ->orWhereHas('productIn', function($subQ) use ($querySearch) {
-                          $subQ->where('name', 'like', "%$querySearch%")
-                               ->orWhere('serial_number', 'like', "%$querySearch%");
-                      });
+                        ->orWhere('note', 'like', "%$querySearch%")
+                        ->orWhereHas('productIn', function ($subQ) use ($querySearch) {
+                            $subQ->where('name', 'like', "%$querySearch%")
+                                ->orWhere('serial_number', 'like', "%$querySearch%");
+                        });
                 });
             }
 
@@ -318,6 +324,9 @@ class StorageController extends Controller
                 return [
                     'type' => 'in',
                     'date' => $item->date,
+                    'action_label' => 'إضافة كمية',
+                    'recorded_by' => $item->recorded_by_label,
+                    'recorded_at' => $item->recorded_at_display,
                     'name' => $item->productIn->name ?? 'عنصر محذوف',
                     'quantity' => $item->quantity,
                     'sn' => $item->productIn->serial_number ?? '-',
@@ -333,16 +342,16 @@ class StorageController extends Controller
         $outs = collect([]);
         if ($typeFilter == 'all' || $typeFilter == 'out') {
             $outsQuery = Out::with('productIn')->whereBetween('date', [$start, $end]);
-            
+
             // Search Logic for Outputs
             if ($querySearch) {
-                $outsQuery->where(function($q) use ($querySearch) {
+                $outsQuery->where(function ($q) use ($querySearch) {
                     $q->where('destination', 'like', "%$querySearch%")
-                      ->orWhere('note', 'like', "%$querySearch%")
-                      ->orWhereHas('productIn', function($subQ) use ($querySearch) {
-                          $subQ->where('name', 'like', "%$querySearch%")
-                               ->orWhere('serial_number', 'like', "%$querySearch%");
-                      });
+                        ->orWhere('note', 'like', "%$querySearch%")
+                        ->orWhereHas('productIn', function ($subQ) use ($querySearch) {
+                            $subQ->where('name', 'like', "%$querySearch%")
+                                ->orWhere('serial_number', 'like', "%$querySearch%");
+                        });
                 });
             }
 
@@ -350,6 +359,9 @@ class StorageController extends Controller
                 return [
                     'type' => 'out',
                     'date' => $item->date, // Assumes you added 'datetime' cast to Model
+                    'action_label' => 'سحب',
+                    'recorded_by' => $item->recorded_by_label,
+                    'recorded_at' => $item->recorded_at_display,
                     'name' => $item->productIn->name ?? 'عنصر محذوف',
                     'quantity' => $item->quantity,
                     'sn' => $item->productIn->serial_number ?? '-',
@@ -363,17 +375,17 @@ class StorageController extends Controller
         $allTransactions = $ins->concat($outs)->sortByDesc('date');
 
         // 2. Manual Pagination Logic
-    $perPage = 20; // Items per page
-    $currentPage = LengthAwarePaginator::resolveCurrentPage();
-    $currentItems = $allTransactions->slice(($currentPage - 1) * $perPage, $perPage)->all();
+        $perPage = 20; // Items per page
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $currentItems = $allTransactions->slice(($currentPage - 1) * $perPage, $perPage)->all();
 
-    $transactions = new LengthAwarePaginator(
-        $currentItems,
-        $allTransactions->count(),
-        $perPage,
-        $currentPage,
-        ['path' => $request->url(), 'query' => $request->query()] // Keeps the filters in the URL
-    );
+        $transactions = new LengthAwarePaginator(
+            $currentItems,
+            $allTransactions->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()] // Keeps the filters in the URL
+        );
 
         return view('storage.report', compact('transactions', 'dateInputs', 'typeFilter', 'querySearch'));
     }

@@ -105,17 +105,19 @@
             </form>
         </div>
 
-        <div class="bg-white shadow-lg rounded-lg overflow-hidden border print-border">
+        <p class="text-sm text-gray-500 mb-3">تاريخ العملية هو التاريخ المُدخل. وقت التسجيل هو وقت حفظها في النظام ({{ config('app.timezone') }}).</p>
+        <div class="bg-white shadow-lg rounded-lg overflow-x-auto border print-border">
             <table class="w-full text-right">
                 <thead class="bg-gray-200 text-gray-700 border-b print-border">
                     <tr>
                         <th class="p-4">نوع الحركة</th>
-                        <th class="p-4">التاريخ</th>
+                        <th class="p-4">تاريخ العملية</th>
                         <th class="p-4">الصنف</th>
                         <th class="p-4">الرقم التسلسلي (SN)</th>
                         <th class="p-4">الكمية</th>
                         <th class="p-4">الطرف الآخر (مستلم/وجهة)</th>
                         <th class="p-4">ملاحظات</th>
+                        <th class="p-4">سجّلها / وقت التسجيل</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -125,11 +127,11 @@
                                 @if($trans['type'] == 'in')
                                     <span
                                         class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold print-border whitespace-nowrap">📥
-                                        وارد</span>
+                                        {{ $trans['action_label'] }}</span>
                                 @else
                                     <span
                                         class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-bold print-border whitespace-nowrap">📤
-                                        صادر</span>
+                                        {{ $trans['action_label'] }}</span>
                                 @endif
                             </td>
 
@@ -151,10 +153,14 @@
                             <td class="p-4 text-gray-600">{{ $trans['party'] }}</td>
 
                             <td class="p-4 text-sm text-gray-500">{{ $trans['note'] }}</td>
+                            <td class="p-4 text-sm">
+                                <span class="block font-bold text-gray-700">{{ $trans['recorded_by'] }}</span>
+                                <span class="block text-xs text-gray-500 whitespace-nowrap" dir="ltr">{{ $trans['recorded_at'] }}</span>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="p-10 text-center text-gray-500">لا توجد حركات مخزنية تطابق البحث.</td>
+                            <td colspan="8" class="p-10 text-center text-gray-500">لا توجد حركات مخزنية تطابق البحث.</td>
                         </tr>
                     @endforelse
                 </tbody>

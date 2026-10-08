@@ -17,27 +17,16 @@ return new class extends Migration
             $table->string('category');
             $table->string('manufacturer')->nullable();
             $table->string('model_type')->nullable();
-            
+
             $table->integer('quantity'); // Initial quantity
             $table->string('serial_number')->nullable(); // Nullable for bulk items
-            
+
             $table->string('reciever')->nullable();
             $table->text('description')->nullable();
             $table->timestamp('added_at');
+            $table->foreignId('created_by')->nullable()->constrained('users')->restrictOnDelete();
+            $table->string('created_by_name')->nullable();
             $table->timestamps(); // Created_at, Updated_at
-        });
-
-        // 2. The Outputs Table
-        Schema::create('outs', function (Blueprint $table) {
-            $table->id();
-            // Connects to the specific batch/item
-            $table->foreignId('product_in_id')->constrained('product_ins')->onDelete('cascade');
-            
-            $table->integer('quantity'); // How many removed
-            $table->dateTime('date');
-            $table->string('destination')->nullable();
-            $table->text('note')->nullable();
-            $table->timestamps();
         });
     }
 
@@ -46,6 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('storage_tables');
+        Schema::dropIfExists('product_ins');
     }
 };

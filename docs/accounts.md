@@ -31,8 +31,20 @@ Users can change their password from **تغيير كلمة المرور**. Login
 php artisan test
 ```
 
-The PHPUnit configuration forces an isolated in-memory SQLite database. The access-control tests cover authentication, account management, both roles, protected inventory operations, account disabling, and password changes/session invalidation.
+The PHPUnit configuration forces MySQL and the separate `mod_storage_testing` database. Create that empty database before the first test run. Tests rebuild its tables; never put application data there. Test bootstrap rejects the application database and DATABASE_URL overrides before any test migrations run. Connection credentials come from the local environment. The access-control tests cover authentication, account management, both roles, protected inventory operations, account disabling, and password changes/session invalidation.
 
 ## Scope
 
-This is the first implementation step: login and roles. Operation attribution, permanent audit history, and replacing inventory deletions with reversals are subsequent steps. Existing edit/delete behavior is currently restricted to admins. Existing users receive the operator role when the migration runs.
+Login, roles, and operation attribution are implemented. Permanent audit history and replacing inventory deletions with reversals are subsequent steps. Existing edit/delete behavior is currently restricted to admins. New accounts default to the operator role unless an admin role is explicitly assigned.
+
+The application uses MySQL with one creation migration per table. See [database setup](database.md) for the consolidated migration layout and local database setup.
+
+## Operation attribution (step 2)
+
+New items, restocks, and withdrawals store `created_by` (the authenticated user's ID) and `created_by_name` (their name at recording time). The controller calls `createRecorded()` with validated operation fields and the authenticated user. The same insert writes the operation and attribution, and the client cannot supply the actor or recording time.
+
+`created_at` is the server recording time, separate from the user-entered `added_at` or `date`. Item details, restock/withdrawal history, and movement reports show both dates and the recorded name. Recording timestamps display in the configured application timezone, currently Asia/Damascus. Movement reports distinguish initial stock, restocks, and withdrawals.
+
+Existing records retain their original timestamps and receive no guessed user attribution; they display **سجل سابق / المستخدم غير معروف** (Legacy / user unknown). Records created outside the authenticated workflow, such as seed data, also have unknown attribution. The inventory CSV remains a stock summary; it is not an operation-history export.
+
+Account renames or deactivation do not change the stored name. Foreign keys prevent deletion of referenced accounts. Existing edit actions preserve the original creator and recording time; tracking the editor and the before/after changes belongs to step 3. Admin deletion still removes inventory history until that step is implemented.

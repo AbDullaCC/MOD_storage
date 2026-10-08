@@ -8,13 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('additions', function (Blueprint $table) {
+        Schema::create('outs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_in_id')->constrained('product_ins')->onDelete('cascade');
-
+            $table->foreignId('product_in_id')->constrained('product_ins')->cascadeOnDelete();
             $table->integer('quantity');
             $table->dateTime('date');
-            $table->string('source')->nullable();
+            $table->string('destination')->nullable();
             $table->text('note')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->restrictOnDelete();
             $table->string('created_by_name')->nullable();
@@ -24,6 +23,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('additions');
+        Schema::dropIfExists('outs');
     }
 };
