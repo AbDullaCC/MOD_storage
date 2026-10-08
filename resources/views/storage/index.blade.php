@@ -38,10 +38,12 @@
                     <input type="checkbox" id="include-out-of-stock" checked class="accent-green-600">
                     تضمين النافذ
                 </label>
+                @can('admin')
                 <a id="export-btn" href="{{ route('storage.export', request()->only('search')) }}"
                     class="ui-button ui-button-success-soft">
                     <x-icon name="download" /> تصدير CSV
                 </a>
+                @endcan
                 <a href="{{ route('storage.create') }}"
                     class="ui-button ui-button-success">
                     <x-icon name="plus" /> إضافة صنف جديد
@@ -120,7 +122,7 @@
                             <td class="p-4">
                                 <span
                                     class="stock-pill {{ $product->current_stock > 0 ? 'status-green' : 'status-red' }}">
-                                    {{ $product->current_stock }} / {{ $product->total_in }}
+                                    {{ $product->current_stock }}
                                 </span>
                             </td>
                             <td class="p-4">

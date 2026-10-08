@@ -13,7 +13,7 @@ Local connection settings are stored in the untracked `.env` file. `.env.example
 
 Each migration under `database/migrations` defines one complete table and drops that same table in `down()`:
 
-- `create_users_table`: account fields, role, and active status.
+- `create_users_table`: unique username, name, password, role, and active status (no email fields).
 - `create_password_reset_tokens_table`: password-reset tokens.
 - `create_failed_jobs_table`: failed jobs.
 - `create_personal_access_tokens_table`: API tokens.
@@ -37,7 +37,7 @@ Configure `.env`, then run:
 
 ```sh
 php artisan migrate
-php artisan app:create-admin admin@example.com --name="Admin"
+php artisan app:create-admin admin --name="Admin"
 php artisan test
 ```
 
@@ -50,3 +50,5 @@ During early local development, rebuilding a disposable database with `php artis
 The local switch from SQLite created a fresh MySQL schema, copied the application tables while preserving IDs/password hashes/timestamps, and verified every copied field. MySQL has its own migration history matching the consolidated files; the old SQLite migration history was not imported. SQLite and environment backups plus a transfer verification report are in the ignored `storage/app/backups` directory. The original SQLite file is retained as an archive and is no longer used by the app. Do not run the consolidated migration history against that old file.
 
 Step 3 backed up `mod_storage` to `storage/app/backups/before-audit-history-20261008-135443.sql`, then upgraded the local tables in place and migrated the new audit table. All original account/inventory field values were verified unchanged. No database reset was needed. Older records have no invented audit events; their history begins with changes made after this update.
+
+The username login update also backed up and upgraded the local database in place. The existing accounts now use `admin` and `entryman`; IDs, password hashes, roles, timestamps, inventory, and audit records were verified unchanged. Email fields were removed from `users`. The backup and verification report are in `storage/app/backups`. The users creation migration includes the username schema for fresh environments, without an additional migration file.

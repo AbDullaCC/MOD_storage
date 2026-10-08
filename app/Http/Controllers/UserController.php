@@ -57,14 +57,16 @@ class UserController extends Controller
 
     private function validated(Request $request, ?User $user = null): array
     {
-        $request->merge(['email' => Str::lower((string) $request->input('email'))]);
-
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user?->id)],
+            'username' => [...User::usernameRules(), Rule::unique('users')->ignore($user?->id)],
             'role' => ['required', Rule::in([User::ROLE_ADMIN, User::ROLE_OPERATOR])],
             'is_active' => ['required', 'boolean'],
             'password' => [$user ? 'nullable' : 'required', 'confirmed', Password::min(8), 'max:72'],
         ]);
+
+        $validated['username'] = User::normalizeUsername($validated['username']);
+
+        return $validated;
     }
 }

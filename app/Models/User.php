@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -15,6 +15,16 @@ class User extends Authenticatable
     public const ROLE_ADMIN = 'admin';
 
     public const ROLE_OPERATOR = 'operator';
+
+    public static function usernameRules(): array
+    {
+        return ['required', 'string', 'min:3', 'max:50', 'regex:/\A[\p{L}\p{N}][\p{L}\p{N}._-]*\z/u'];
+    }
+
+    public static function normalizeUsername(string $username): string
+    {
+        return Str::lower(trim($username));
+    }
 
     public function isAdmin(): bool
     {
@@ -28,7 +38,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
-        'email',
+        'username',
         'password',
     ];
 
@@ -48,7 +58,6 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
     ];

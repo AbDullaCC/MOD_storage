@@ -18,7 +18,7 @@ class EnsureActiveAccount
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors(['email' => 'هذا الحساب غير متاح. يرجى التواصل مع المدير.']);
+            return redirect()->route('login')->withErrors(['username' => 'هذا الحساب غير متاح. يرجى التواصل مع المدير.']);
         }
 
         return $next($request);

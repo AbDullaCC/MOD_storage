@@ -2,11 +2,14 @@
 
 All inventory pages and actions require an active account. There is no public registration route.
 
+Sign in with a **username and password**; accounts do not require email. Usernames contain 3–50 characters: letters (including Arabic), numbers, dots, underscores, or hyphens, starting with a letter or number. Spaces are not allowed. Usernames are unique and stored in lowercase; surrounding spaces are trimmed and login is case insensitive. Admins assign or edit usernames in account management. Changing a username preserves the account ID, password, and recorded operations.
+
 The inventory list is at `/storage`. Use **إضافة صنف جديد** to open the separate entry form at `/storage/create`. Both operators and admins can create items. Saving returns to the inventory list; validation errors return to the form with the entered values preserved. Adding stock to an existing item and withdrawing stock remain available directly from the inventory list.
 
 | Permission | Operator | Admin |
 | --- | --- | --- |
-| View inventory, reports, and CSV exports | Yes | Yes |
+| View inventory | Yes | Yes |
+| View movement reports and export inventory CSV | No | Yes |
 | Create items, add stock, and withdraw stock | Yes | Yes |
 | Correct records, cancel movements, archive/restore items, view change history | No | Yes |
 | Create accounts, change roles, disable accounts, reset passwords | No | Yes |
@@ -20,7 +23,7 @@ Apply the migrations and create the first admin from a trusted terminal:
 
 ```sh
 php artisan migrate
-php artisan app:create-admin admin@example.com --name="Admin"
+php artisan app:create-admin admin --name="Admin"
 ```
 
 The command asks for a password and confirmation without displaying them. It refuses to overwrite an existing account. No default accounts or passwords are seeded. Use the admin screen to create operators and additional admins.

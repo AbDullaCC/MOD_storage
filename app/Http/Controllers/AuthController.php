@@ -20,19 +20,19 @@ class AuthController extends Controller
     public function store(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required', 'string', 'email', 'max:255'],
+            'username' => User::usernameRules(),
             'password' => ['required', 'string'],
         ]);
-        $credentials['email'] = Str::lower($credentials['email']);
-        $key = 'login:'.hash('sha256', $credentials['email'].'|'.$request->ip());
+        $credentials['username'] = User::normalizeUsername($credentials['username']);
+        $key = 'login:'.hash('sha256', $credentials['username'].'|'.$request->ip());
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            throw ValidationException::withMessages(['email' => 'محاولات كثيرة. حاول مجدداً بعد '.RateLimiter::availableIn($key).' ثانية.']);
+            throw ValidationException::withMessages(['username' => 'محاولات كثيرة. حاول مجدداً بعد '.RateLimiter::availableIn($key).' ثانية.']);
         }
 
         if (! Auth::attempt([...$credentials, 'is_active' => true, 'role' => [User::ROLE_ADMIN, User::ROLE_OPERATOR]])) {
             RateLimiter::hit($key, 60);
-            throw ValidationException::withMessages(['email' => 'بيانات تسجيل الدخول غير صحيحة أو الحساب غير متاح.']);
+            throw ValidationException::withMessages(['username' => 'بيانات تسجيل الدخول غير صحيحة أو الحساب غير متاح.']);
         }
 
         RateLimiter::clear($key);

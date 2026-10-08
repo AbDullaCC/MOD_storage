@@ -30,14 +30,14 @@ Route::middleware(['auth', 'active', 'auth.session'])->group(function () {
 
     Route::get('/storage', [StorageController::class, 'index'])->name('storage.index');
     Route::get('/storage/create', [StorageController::class, 'create'])->name('storage.create');
-    Route::get('/storage/export', [StorageController::class, 'export'])->name('storage.export');
     Route::post('/storage', [StorageController::class, 'store'])->name('storage.store'); // Add Item
     Route::post('/storage/out', [StorageController::class, 'storeOut'])->name('storage.out'); // Remove Item
     Route::post('/storage/addition', [StorageController::class, 'storeAddition'])->name('storage.addition'); // Add batch to existing item
-    Route::get('/storage/report', [StorageController::class, 'report'])->name('storage.report');
 
     // Edit/Delete ITEMS
     Route::middleware('can:admin')->group(function () {
+        Route::get('/storage/report', [StorageController::class, 'report'])->name('storage.report');
+        Route::get('/storage/export', [StorageController::class, 'export'])->name('storage.export');
         Route::resource('users', UserController::class)->except(['show', 'destroy']);
         Route::get('/storage/item/{id}/history', [StorageController::class, 'history'])->name('storage.history');
         Route::post('/storage/item/{id}/restore', [StorageController::class, 'restoreItem'])->name('storage.restoreItem');

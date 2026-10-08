@@ -20,7 +20,7 @@ class AccessControlTest extends TestCase
     private function accountData(array $overrides = []): array
     {
         return array_merge([
-            'name' => 'Entry User', 'email' => 'entry@example.test',
+            'name' => 'Entry User', 'username' => 'entry_user',
             'role' => 'operator', 'is_active' => '1',
             'password' => 'entry-password', 'password_confirmation' => 'entry-password',
         ], $overrides);
@@ -48,9 +48,11 @@ class AccessControlTest extends TestCase
     public function test_login_and_logout_work_and_public_registration_is_absent(): void
     {
         $user = $this->account();
-        $this->get('/login')->assertOk()->assertSee('تسجيل الدخول');
+        $this->get('/login')->assertOk()->assertSee('اسم المستخدم')->assertDontSee('name="email"', false);
         $this->get('/storage')->assertRedirect('/login');
-        $this->post('/login', ['email' => strtoupper($user->email), 'password' => 'password'])
+        $this->post('/login', ['email' => 'admin@example.test', 'password' => 'password'])->assertSessionHasErrors('username');
+        $this->assertGuest();
+        $this->post('/login', ['username' => ' '.strtoupper($user->username).' ', 'password' => 'password'])
             ->assertRedirect('/storage');
         $this->assertAuthenticatedAs($user);
         $this->get('/login')->assertRedirect('/storage');
@@ -65,16 +67,17 @@ class AccessControlTest extends TestCase
     {
         $user = $this->account();
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $this->post('/login', ['email' => $user->email, 'password' => 'wrong'])->assertSessionHasErrors('email');
+            $username = $attempt % 2 ? ' '.strtoupper($user->username).' ' : $user->username;
+            $this->post('/login', ['username' => $username, 'password' => 'wrong'])->assertSessionHasErrors('username');
         }
-        $this->post('/login', ['email' => $user->email, 'password' => 'password'])->assertSessionHasErrors('email');
+        $this->post('/login', ['username' => $user->username, 'password' => 'password'])->assertSessionHasErrors('username');
         $this->assertGuest();
     }
 
     public function test_disabled_accounts_cannot_login_or_continue_an_existing_session(): void
     {
         $user = $this->account('operator', false);
-        $this->post('/login', ['email' => $user->email, 'password' => 'password'])->assertSessionHasErrors('email');
+        $this->post('/login', ['username' => $user->username, 'password' => 'password'])->assertSessionHasErrors('username');
         $this->assertGuest();
         $this->actingAs($user)->get('/storage')->assertRedirect('/login');
         $this->assertGuest();
@@ -97,7 +100,19 @@ class AccessControlTest extends TestCase
             ->assertSessionHasNoErrors()->assertRedirect();
         $this->assertSame(12, $item->fresh()->current_stock);
         $this->get('/storage')->assertOk()->assertDontSee('id="delete-item-form"', false)->assertDontSee('id="new-item-form"', false)->assertSee('href="'.route('storage.create').'"', false)->assertDontSee('إدارة المستخدمين');
-        $this->get('/storage/report')->assertOk()->assertSee('Test Item');
+        $this->get('/storage')->assertOk()->assertDontSee('href="'.route('storage.report').'"', false)->assertDontSee('id="export-btn"', false);
+        $this->get('/storage/report')->assertForbidden();
+        $this->get('/storage/report?show_all=1&search=Test')->assertForbidden();
+        $this->get('/storage/export')->assertForbidden();
+    }
+
+    public function test_admin_can_access_reports_and_export_inventory(): void
+    {
+        ProductIn::create(['name' => 'Report item', 'category' => 'Test', 'quantity' => 10, 'added_at' => now()->subMinute()]);
+        $this->actingAs($this->account('admin'));
+        $this->get('/storage')->assertOk()->assertSee('href="'.route('storage.report').'"', false)->assertSee('id="export-btn"', false);
+        $this->get('/storage/report')->assertOk()->assertSee('Report item');
+        $this->get('/storage/report?show_all=1&search=Report')->assertOk()->assertSee('Report item');
         $this->get('/storage/export')->assertOk()->assertDownload();
     }
 
@@ -131,8 +146,8 @@ class AccessControlTest extends TestCase
         $this->get('/storage/create')->assertOk()->assertViewIs('storage.create');
         $this->get('/users')->assertOk();
         $this->get('/users/create')->assertOk();
-        $this->post('/users', $this->accountData(['email' => 'ENTRY@example.test']))->assertRedirect('/users');
-        $user = User::where('email', 'entry@example.test')->firstOrFail();
+        $this->post('/users', $this->accountData(['username' => 'ENTRY_USER']))->assertRedirect('/users');
+        $user = User::where('username', 'entry_user')->firstOrFail();
         $this->assertTrue(Hash::check('entry-password', $user->password));
         $this->get('/users/'.$user->id.'/edit')->assertOk();
         $this->put('/users/'.$user->id, $this->accountData(['role' => 'admin', 'is_active' => '0', 'password' => 'replacement-password', 'password_confirmation' => 'replacement-password']))
@@ -149,18 +164,44 @@ class AccessControlTest extends TestCase
         $admin = $this->account('admin');
         $this->actingAs($admin);
         foreach ([['role' => 'operator'], ['role' => 'admin', 'is_active' => '0']] as $change) {
-            $this->put('/users/'.$admin->id, $this->accountData([...$change, 'email' => $admin->email]))->assertSessionHasErrors('role');
+            $this->put('/users/'.$admin->id, $this->accountData([...$change, 'username' => $admin->username]))->assertSessionHasErrors('role');
         }
         $this->assertTrue($admin->fresh()->isAdmin());
     }
 
-    public function test_account_validation_rejects_duplicate_email_invalid_role_and_weak_password(): void
+    public function test_account_validation_rejects_duplicate_username_invalid_role_and_weak_password(): void
     {
         $admin = $this->account('admin');
         $this->actingAs($admin)->post('/users', $this->accountData([
-            'email' => $admin->email, 'role' => 'owner', 'password' => 'short', 'password_confirmation' => 'short',
-        ]))->assertSessionHasErrors(['email', 'role', 'password']);
+            'username' => strtoupper($admin->username), 'role' => 'owner', 'password' => 'short', 'password_confirmation' => 'short',
+        ]))->assertSessionHasErrors(['username', 'role', 'password']);
         $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_usernames_reject_email_addresses_spaces_and_invalid_input(): void
+    {
+        $this->actingAs($this->account('admin'));
+        foreach (['', 'ab', 'entry@example.test', 'entry man', '-entry', str_repeat('a', 51), ['entry']] as $username) {
+            $this->post('/users', $this->accountData(['username' => $username]))->assertSessionHasErrors('username');
+        }
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_changing_username_preserves_password_and_allows_login_with_the_new_identifier(): void
+    {
+        $user = $this->account();
+        $originalUsername = $user->username;
+        $originalPassword = $user->password;
+        $this->actingAs($this->account('admin'))
+            ->put('/users/'.$user->id, $this->accountData(['username' => ' موظف_المستودع ', 'password' => '', 'password_confirmation' => '']))
+            ->assertSessionHasNoErrors()->assertRedirect('/users');
+        $this->assertSame('موظف_المستودع', $user->fresh()->username);
+        $this->assertSame($originalPassword, $user->fresh()->password);
+        $this->post('/logout');
+        $this->post('/login', ['username' => $originalUsername, 'password' => 'password'])->assertSessionHasErrors('username');
+        $this->assertGuest();
+        $this->post('/login', ['username' => 'موظف_المستودع', 'password' => 'password'])->assertRedirect('/storage');
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_admin_can_edit_and_cancel_inventory_without_erasing_it(): void
@@ -206,14 +247,14 @@ class AccessControlTest extends TestCase
 
     public function test_admin_creation_command_creates_a_hashed_admin_without_overwriting_existing_users(): void
     {
-        $this->artisan('app:create-admin', ['email' => 'admin@example.test', '--name' => 'Admin'])
+        $this->artisan('app:create-admin', ['username' => 'admin', '--name' => 'Admin'])
             ->expectsQuestion('Password (at least 8 characters)', 'admin-password')
             ->expectsQuestion('Confirm password', 'admin-password')
-            ->expectsOutput('Admin account created: admin@example.test')->assertSuccessful();
-        $user = User::where('email', 'admin@example.test')->firstOrFail();
+            ->expectsOutput('Admin account created: admin')->assertSuccessful();
+        $user = User::where('username', 'admin')->firstOrFail();
         $this->assertTrue($user->isAdmin());
         $this->assertTrue(Hash::check('admin-password', $user->password));
-        $this->artisan('app:create-admin', ['email' => 'admin@example.test'])
+        $this->artisan('app:create-admin', ['username' => 'admin'])
             ->expectsQuestion('Password (at least 8 characters)', 'replacement-password')
             ->expectsQuestion('Confirm password', 'replacement-password')->assertFailed();
         $this->assertTrue(Hash::check('admin-password', $user->fresh()->password));

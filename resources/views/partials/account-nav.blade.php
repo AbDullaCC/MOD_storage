@@ -6,8 +6,8 @@
         </a>
         <nav class="app-navigation" aria-label="التنقل الرئيسي">
             <a href="{{ route('storage.index') }}" class="nav-button {{ request()->routeIs('storage.index', 'storage.create', 'storage.history') ? 'is-active' : '' }}" @if(request()->routeIs('storage.index', 'storage.create', 'storage.history')) aria-current="page" @endif><x-icon name="box" /> المخزون</a>
-            <a href="{{ route('storage.report') }}" class="nav-button {{ request()->routeIs('storage.report') ? 'is-active' : '' }}" @if(request()->routeIs('storage.report')) aria-current="page" @endif><x-icon name="chart" /> التقارير</a>
             @can('admin')
+                <a href="{{ route('storage.report') }}" class="nav-button {{ request()->routeIs('storage.report') ? 'is-active' : '' }}" @if(request()->routeIs('storage.report')) aria-current="page" @endif><x-icon name="chart" /> التقارير</a>
                 <a href="{{ route('users.index') }}" class="nav-button {{ request()->routeIs('users.*') ? 'is-active' : '' }}" @if(request()->routeIs('users.*')) aria-current="page" @endif><x-icon name="users" /> إدارة المستخدمين</a>
             @endcan
         </nav>
@@ -15,7 +15,7 @@
             <span class="user-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
             <div class="user-details">
                 <div><strong dir="auto">{{ auth()->user()->name }}</strong><span class="role-badge">{{ auth()->user()->isAdmin() ? 'مدير' : 'موظف إدخال' }}</span></div>
-                <small dir="ltr">{{ auth()->user()->email }}</small>
+                <small dir="auto">{{ auth()->user()->username }}</small>
             </div>
             <div class="account-actions">
                 <a href="{{ route('password.edit') }}" class="icon-button {{ request()->routeIs('password.edit') ? 'is-active' : '' }}" aria-label="تغيير كلمة المرور" title="تغيير كلمة المرور"><x-icon name="key" /></a>

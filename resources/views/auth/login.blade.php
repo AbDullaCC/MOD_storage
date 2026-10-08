@@ -8,8 +8,8 @@
     <form action="{{ route('login.store') }}" method="POST" class="space-y-5">
         @csrf
         <div>
-            <label for="email" class="block font-bold mb-2">البريد الإلكتروني</label>
-            <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username" dir="ltr" class="w-full border rounded-lg p-3">
+            <label for="username" class="block font-bold mb-2">اسم المستخدم</label>
+            <input id="username" type="text" name="username" value="{{ old('username') }}" required minlength="3" maxlength="50" autofocus autocomplete="username" autocapitalize="none" spellcheck="false" dir="auto" class="w-full border rounded-lg p-3">
         </div>
         <div>
             <label for="password" class="block font-bold mb-2">كلمة المرور</label>
