@@ -9,12 +9,13 @@ class ProductIn extends Model
 {
     use RecordsCreator;
 
-    protected $guarded = ['created_by', 'created_by_name', 'created_at'];
+    protected $guarded = ['created_by', 'created_by_name', 'created_at', 'archived_at'];
 
     protected $appends = ['recorded_by_label', 'recorded_at_display'];
 
     protected $casts = [
         'added_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
 
     // Relationship: One batch can have many removals
@@ -32,14 +33,14 @@ class ProductIn extends Model
     // Helper: Total quantity ever added (initial + restocks)
     public function getTotalInAttribute()
     {
-        return $this->quantity + (int) $this->additions()->sum('quantity');
+        return $this->quantity + (int) $this->additions()->whereNull('cancelled_at')->sum('quantity');
     }
 
     // Helper: Calculate how many are left right now
     public function getCurrentStockAttribute()
     {
-        $totalOut = (int) $this->outs()->sum('quantity');
-        $totalAdded = (int) $this->additions()->sum('quantity');
+        $totalOut = (int) $this->outs()->whereNull('cancelled_at')->sum('quantity');
+        $totalAdded = (int) $this->additions()->whereNull('cancelled_at')->sum('quantity');
 
         return $this->quantity + $totalAdded - $totalOut;
     }

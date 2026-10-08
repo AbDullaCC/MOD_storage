@@ -2,6 +2,7 @@
 @section('title', 'تسجيل الدخول')
 @section('content')
 <section class="max-w-md mx-auto mt-12 bg-white rounded-xl shadow-md border-t-4 border-blue-600 p-8">
+    <span class="brand-mark mb-5"><x-icon name="box" /></span>
     <h1 class="text-2xl font-bold mb-2">نظام إدارة المخزون</h1>
     <p class="text-gray-500 mb-6">سجّل الدخول باستخدام الحساب الذي أنشأه المدير.</p>
     <form action="{{ route('login.store') }}" method="POST" class="space-y-5">
@@ -14,7 +15,7 @@
             <label for="password" class="block font-bold mb-2">كلمة المرور</label>
             <input id="password" type="password" name="password" required autocomplete="current-password" dir="ltr" class="w-full border rounded-lg p-3">
         </div>
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg p-3">تسجيل الدخول</button>
+        <button type="submit" class="ui-button ui-button-primary w-full">تسجيل الدخول <x-icon name="arrow" /></button>
     </form>
     <p class="text-sm text-gray-500 mt-5">لإنشاء حساب أو استعادة الوصول، تواصل مع المدير.</p>
 </section>

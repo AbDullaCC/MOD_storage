@@ -37,6 +37,7 @@ class AccessControlTest extends TestCase
             ['GET', '/users'], ['GET', '/users/create'], ['POST', '/users'],
             ['GET', '/users/1/edit'], ['PUT', '/users/1'],
             ['GET', '/account/password'], ['PUT', '/account/password'],
+            ['GET', '/storage/item/1/history'], ['POST', '/storage/item/1/restore'],
         ] as [$method, $url]) {
             $this->call($method, $url)->assertRedirect('/login');
         }
@@ -108,6 +109,7 @@ class AccessControlTest extends TestCase
             ['PUT', '/storage/addition/'.$addition->id], ['DELETE', '/storage/addition/'.$addition->id],
             ['GET', '/users'], ['GET', '/users/create'], ['POST', '/users'],
             ['GET', '/users/'.$user->id.'/edit'], ['PUT', '/users/'.$user->id],
+            ['GET', '/storage/item/'.$item->id.'/history'], ['POST', '/storage/item/'.$item->id.'/restore'],
         ] as [$method, $url]) {
             $this->call($method, $url, $this->accountData(['role' => 'admin']))->assertForbidden();
         }
@@ -155,21 +157,23 @@ class AccessControlTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
-    public function test_admin_retains_existing_inventory_edit_and_delete_access(): void
+    public function test_admin_can_edit_and_cancel_inventory_without_erasing_it(): void
     {
         $item = ProductIn::create(['name' => 'Before', 'category' => 'Test', 'quantity' => 10, 'added_at' => now()->subMinute()]);
         $out = $item->outs()->create(['quantity' => 1, 'date' => now()->subMinute()]);
         $addition = $item->additions()->create(['quantity' => 2, 'date' => now()->subMinute()]);
         $this->actingAs($this->account('admin'));
         $this->get('/storage')->assertOk()->assertSee('id="delete-item-form"', false)->assertSee('إدارة المستخدمين');
-        $this->put('/storage/item/'.$item->id, ['name' => 'After', 'category' => 'Test', 'added_at' => now()->subMinute()->toDateTimeString()])->assertSessionHasNoErrors();
+        $this->put('/storage/item/'.$item->id, ['name' => 'After', 'category' => 'Test', 'added_at' => now()->subMinute()->toDateTimeString(), 'reason' => 'Correct name'])->assertSessionHasNoErrors();
         $this->assertSame('After', $item->fresh()->name);
-        $this->put('/storage/out/'.$out->id, ['date' => now()->subMinute()->toDateTimeString(), 'note' => 'Updated'])->assertSessionHasNoErrors();
-        $this->put('/storage/addition/'.$addition->id, ['date' => now()->subMinute()->toDateTimeString(), 'note' => 'Updated'])->assertSessionHasNoErrors();
-        $this->delete('/storage/out/'.$out->id)->assertRedirect();
-        $this->delete('/storage/addition/'.$addition->id)->assertRedirect();
-        $this->delete('/storage/item/'.$item->id)->assertRedirect();
-        $this->assertDatabaseCount('product_ins', 0);
+        $this->put('/storage/out/'.$out->id, ['date' => now()->subMinute()->toDateTimeString(), 'note' => 'Updated', 'reason' => 'Correct note'])->assertSessionHasNoErrors();
+        $this->put('/storage/addition/'.$addition->id, ['date' => now()->subMinute()->toDateTimeString(), 'note' => 'Updated', 'reason' => 'Correct note'])->assertSessionHasNoErrors();
+        $this->delete('/storage/out/'.$out->id, ['reason' => 'Incorrect withdrawal'])->assertSessionHasNoErrors()->assertRedirect();
+        $this->delete('/storage/addition/'.$addition->id, ['reason' => 'Incorrect restock'])->assertSessionHasNoErrors()->assertRedirect();
+        $this->delete('/storage/item/'.$item->id, ['reason' => 'Archive item'])->assertSessionHasErrors('inventory');
+        $this->assertDatabaseCount('product_ins', 1);
+        $this->assertNotNull($out->fresh()->cancelled_at);
+        $this->assertNotNull($addition->fresh()->cancelled_at);
     }
 
     public function test_users_can_change_password_but_cannot_promote_themselves(): void

@@ -21,28 +21,30 @@
             border-radius: 4px;
         }
     </style>
+    @include('partials.app-styles')
 </head>
 
-<body class="bg-gray-100 p-4 md:p-10">
+<body class="app-shell">
 
     @include('partials.account-nav')
 
-    <div class="max-w-[98%] mx-auto">
+    <main class="app-content" data-page-content>
 
-        <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
-            <h1 class="text-3xl font-bold text-gray-800">📦 نظام إدارة المخزون</h1>
-            <div class="flex items-center gap-2">
-                <label class="bg-white border px-3 py-2 rounded-lg shadow text-sm font-bold text-gray-700 flex items-center gap-2 cursor-pointer">
+        <div class="page-heading">
+            <div><div class="eyebrow">مساحة العمل / المخزون</div><h1>إدارة المخزون</h1><p>تابع الأصناف والكميات، وسجّل حركة المخزن بسهولة.</p></div>
+            <div class="heading-actions">
+                <a href="{{ route('storage.index', ['include_archived' => request()->boolean('include_archived') ? 0 : 1, 'search' => request('search')]) }}" class="ui-button"><x-icon name="archive" />{{ request()->boolean('include_archived') ? 'إخفاء المؤرشف' : 'عرض المؤرشف أيضاً' }}</a>
+                <label class="ui-button cursor-pointer">
                     <input type="checkbox" id="include-out-of-stock" checked class="accent-green-600">
                     تضمين النافذ
                 </label>
                 <a id="export-btn" href="{{ route('storage.export', request()->only('search')) }}"
-                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow flex items-center gap-2 transition font-bold">
-                    📥 تصدير CSV
+                    class="ui-button ui-button-success-soft">
+                    <x-icon name="download" /> تصدير CSV
                 </a>
                 <a href="{{ route('storage.report') }}"
-                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center gap-2 transition font-bold">
-                    📄 التقارير
+                    class="ui-button ui-button-primary">
+                    <x-icon name="chart" /> التقارير
                 </a>
             </div>
         </div>
@@ -58,44 +60,35 @@
             </div>
         @endif
 
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-500">
-            <h2 class="text-xl font-bold mb-4 text-blue-900">📥 إدخال للمخزن (إضافة)</h2>
+        @if($errors->any())
+            <div role="alert" class="bg-red-100 text-red-800 p-4 mb-4 rounded"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+        @endif
+        <div class="ui-panel inventory-create">
+            <div class="panel-heading"><span class="section-icon status-green"><x-icon name="plus" /></span><div><h2>إضافة صنف جديد</h2><p>أدخل بيانات الصنف والكمية المتوفرة عند إضافته.</p></div></div>
             <form action="{{ route('storage.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 @csrf
-                <input type="text" name="name" placeholder="اسم الصنف"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-                <input type="text" name="category" placeholder="التصنيف"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-                <input type="text" name="manufacturer" placeholder="الشركة المصنعة"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
-                <input type="text" name="model_type" placeholder="الموديل / النوع"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
-                <input type="number" name="quantity" placeholder="الكمية"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none" required>
-                <input type="text" name="serial_number" placeholder="الرقم التسلسلي"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
-                <input type="text" name="reciever" placeholder="اسم المستلم (اختياري)"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
-                <input type="datetime-local" name="added_at" value="{{ now()->format('Y-m-d\TH:i') }}"
-                    max="{{ now()->format('Y-m-d\TH:i') }}"
-                    class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none text-right" required>
-                <textarea name="description" placeholder="ملاحظات..." rows="1"
-                    class="col-span-1 md:col-span-4 border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"></textarea>
-                <button type="submit"
-                    class="col-span-1 md:col-span-4 bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700 shadow transition">+
-                    إضافة للمخزون</button>
+                <label>اسم الصنف <span class="text-blue-600">*</span><input type="text" name="name" placeholder="مثال: جهاز راوتر" required></label>
+                <label>التصنيف <span class="text-blue-600">*</span><input type="text" name="category" placeholder="مثال: تقانة" required></label>
+                <label>الشركة المصنعة<input type="text" name="manufacturer" placeholder="اسم الشركة"></label>
+                <label>الموديل / النوع<input type="text" name="model_type" placeholder="الموديل أو النوع"></label>
+                <label>الكمية <span class="text-blue-600">*</span><input type="number" name="quantity" placeholder="0" required></label>
+                <label>الرقم التسلسلي<input type="text" name="serial_number" placeholder="SN"></label>
+                <label>اسم المستلم<input type="text" name="reciever" placeholder="اختياري"></label>
+                <label>تاريخ العملية <span class="text-blue-600">*</span><input type="datetime-local" name="added_at" value="{{ now()->format('Y-m-d\TH:i') }}" max="{{ now()->format('Y-m-d\TH:i') }}" required></label>
+                <label class="col-span-1 md:col-span-4">ملاحظات<textarea name="description" placeholder="أي تفاصيل إضافية عن الصنف..." rows="1"></textarea></label>
+                <div class="col-span-1 md:col-span-4 form-footer"><span class="form-hint"><x-icon name="shield" />تُسجّل العملية باسم حسابك الحالي.</span><button type="submit" class="ui-button ui-button-success"><x-icon name="plus" />إضافة للمخزون</button></div>
             </form>
         </div>
 
-        <div class="mb-6 relative">
-            <input type="text" id="search-input" placeholder="🔍 بحث سريع..."
-                class="w-full border p-3 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <div class="inventory-toolbar">
+            <h2>الأصناف <span id="inventory-count" class="count-badge">{{ $products->total() }} صنف</span></h2>
+            <div class="search-field"><x-icon name="search" /><input type="search" id="search-input" aria-label="بحث في المخزون" value="{{ request('search') }}" placeholder="ابحث بالاسم، التصنيف أو الرقم التسلسلي..."></div>
         </div>
 
         <div id="results-container"
-            class="bg-white shadow-lg rounded-lg overflow-x-auto transition-opacity duration-200">
+            class="ui-panel inventory-table transition-opacity duration-200">
             <table class="w-full text-right whitespace-nowrap">
-                <thead class="bg-gray-200 text-gray-700 text-sm">
+                <thead>
                     <tr>
                         <th class="p-4">الصنف</th>
                         <th class="p-4">التصنيف</th>
@@ -121,6 +114,8 @@
                                         data-date="{{ $product->added_at->format('Y-m-d\TH:i') }}"
                                         data-recorded-by="{{ $product->recorded_by_label }}"
                                         data-recorded-at="{{ $product->recorded_at_display }}"
+                                        data-archived="{{ $product->archived_at ? '1' : '0' }}"
+                                        data-outs="{{ $product->outs->toJson() }}" data-additions="{{ $product->additions->toJson() }}"
                                         data-desc="{{ $product->description }}" data-sn="{{ $product->serial_number }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -131,6 +126,7 @@
                                         </svg>
                                     </button>
                                     <span class="font-bold text-gray-800">{{ $product->name }}</span>
+                                    @if($product->archived_at)<span class="status-badge status-amber">مؤرشف</span>@endif
                                 </div>
                             </td>
                             <td class="p-4 text-gray-600">{{ $product->category }}</td>
@@ -140,24 +136,26 @@
                             <td class="p-4 font-mono text-gray-600">{{ $product->serial_number ?? '-' }}</td>
                             <td class="p-4">
                                 <span
-                                    class="px-3 py-1 rounded-full text-xs font-bold {{ $product->current_stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                    class="stock-pill {{ $product->current_stock > 0 ? 'status-green' : 'status-red' }}">
                                     {{ $product->current_stock }} / {{ $product->total_in }}
                                 </span>
                             </td>
                             <td class="p-4">
-                                <div class="flex items-center gap-1">
+                                <div class="flex items-center gap-2">
+                                    @unless($product->archived_at)
                                     <button
                                         onclick="openAddModal({{ $product->id }}, '{{ addslashes($product->name) }}')"
-                                        class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 transition shadow flex items-center gap-1">
-                                        <span>إضافة</span>
+                                        class="ui-button ui-button-success ui-button-small">
+                                        <x-icon name="plus" /><span>إضافة</span>
                                     </button>
                                     @if($product->current_stock > 0)
                                         <button
                                             onclick="openRemoveModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->current_stock }})"
-                                            class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 transition shadow flex items-center gap-1">
-                                            <span>سحب</span>
+                                            class="ui-button ui-button-danger ui-button-small">
+                                            <x-icon name="box" /><span>سحب</span>
                                         </button>
                                     @endif
+                                    @endunless
                                 </div>
                                 @if($product->current_stock <= 0)
                                     <span class="text-gray-400 text-xs font-bold">نفذت الكمية</span>
@@ -172,38 +170,38 @@
             <div class="p-4 dir-ltr" dir="ltr"> {{ $products->links() }}
             </div>
         </div>
-    </div>
+    </main>
 
     <div id="details-modal"
-        class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex justify-center items-center backdrop-blur-sm"
+        role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1" class="app-dialog hidden"
         onclick="closeModalIfOutside(event, 'details-modal')">
         <div
-            class="bg-white rounded-lg shadow-2xl w-full max-w-5xl p-6 relative max-h-[90vh] overflow-y-auto modal-scroll">
+            class="dialog-panel dialog-panel-wide modal-scroll">
 
-            <div class="flex justify-between items-start border-b pb-4 mb-4">
+            <div class="dialog-header">
                 <div>
-                    <h3 class="text-2xl font-bold text-gray-800" id="modal-title">...</h3>
+                    <div class="dialog-heading"><span class="section-icon"><x-icon name="box" /></span><div><h3 id="modal-title">...</h3><p>تفاصيل الصنف وحركات المخزون</p></div></div>
                     @can('admin')
-                    <div class="flex gap-2 mt-2">
-                        <button onclick="openEditItemModal()"
-                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200 font-bold transition">✏️
+                    <div class="details-actions">
+                        <a id="item-history-link" class="ui-button ui-button-soft ui-button-small"><x-icon name="history" />سجل التغييرات</a>
+                        <button id="edit-item-button" onclick="openEditItemModal()"
+                            class="ui-button ui-button-warning-soft ui-button-small"><x-icon name="edit" />
                             تعديل البيانات</button>
                         <form id="delete-item-form" method="POST"
-                            onsubmit="return confirm('هل أنت متأكد من حذف هذا العنصر؟ سيتم حذف جميع سجلات السحب المرتبطة به أيضاً!')"
+                            onsubmit="openCancelModal('item', currentItemData.id); return false;"
                             class="inline">
                             @csrf @method('DELETE')
                             <button type="submit"
-                                class="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200 font-bold transition">🗑️
-                                حذف العنصر</button>
+                                class="ui-button ui-button-danger-soft ui-button-small"><x-icon name="archive" />
+                                أرشفة العنصر</button>
                         </form>
                     </div>
                     @endcan
                 </div>
-                <button onclick="document.getElementById('details-modal').classList.add('hidden')"
-                    class="text-gray-400 hover:text-red-500 text-3xl">&times;</button>
+                <button type="button" onclick="closeModal('details-modal')" aria-label="إغلاق التفاصيل" class="icon-button"><x-icon name="close" /></button>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-right mb-6 bg-gray-50 p-4 rounded-lg">
+            <div class="details-grid grid grid-cols-2 md:grid-cols-4 gap-4 text-right mb-6">
                 <div>
                     <p class="text-xs text-gray-500">التصنيف</p>
                     <p class="font-bold text-gray-800" id="modal-category">...</p>
@@ -225,11 +223,11 @@
                     <p class="font-bold text-gray-800" id="modal-receiver">...</p>
                 </div>
                 <div class="col-span-2">
-                    <p class="text-xs text-gray-500">تاريخ العملية (الرصيد الافتتاحي)</p>
+                    <p class="text-xs text-gray-500">تاريخ إضافة الصنف</p>
                     <p class="font-bold text-gray-800 dir-ltr text-right" id="modal-date">...</p>
                 </div>
                 <div class="col-span-2">
-                    <p class="text-xs text-gray-500">سجّل الرصيد الافتتاحي</p>
+                    <p class="text-xs text-gray-500">أنشأ الصنف</p>
                     <p class="font-bold text-gray-800" id="modal-recorded-by">...</p>
                 </div>
                 <div class="col-span-2">
@@ -242,18 +240,18 @@
                 </div>
             </div>
 
-            <div class="mb-6">
-                <h4 class="text-lg font-bold text-gray-800 mb-2 border-r-4 border-green-500 pr-2">📥 سجل الإضافات (دفعات جديدة)</h4>
-                <div class="bg-white border rounded overflow-x-auto">
+            <div class="mb-6 movement-in">
+                <h4 class="movement-heading"><span class="section-icon status-green"><x-icon name="plus" /></span>سجل الإضافات <span class="form-hint">دفعات جديدة</span></h4>
+                <div class="movement-table">
                     <table class="w-full text-right text-sm">
-                        <thead class="bg-gray-100 text-gray-600">
+                        <thead>
                             <tr>
                                 <th class="p-2">تاريخ العملية</th>
                                 <th class="p-2">الكمية</th>
                                 <th class="p-2">المصدر</th>
                                 <th class="p-2">ملاحظات</th>
                                 <th class="p-2">سجّلها / وقت التسجيل</th>
-                                @can('admin')<th class="p-2 w-20">تحكم</th>@endcan
+                                @can('admin')<th>الإجراءات</th>@endcan
                             </tr>
                         </thead>
                         <tbody id="modal-additions-body"></tbody>
@@ -263,18 +261,18 @@
                 </div>
             </div>
 
-            <div>
-                <h4 class="text-lg font-bold text-gray-800 mb-2 border-r-4 border-blue-500 pr-2">📜 سجل المسحوبات</h4>
-                <div class="bg-white border rounded overflow-x-auto">
+            <div class="movement-out">
+                <h4 class="movement-heading"><span class="section-icon status-red"><x-icon name="history" /></span>سجل المسحوبات</h4>
+                <div class="movement-table">
                     <table class="w-full text-right text-sm">
-                        <thead class="bg-gray-100 text-gray-600">
+                        <thead>
                             <tr>
                                 <th class="p-2">تاريخ العملية</th>
                                 <th class="p-2">الكمية</th>
                                 <th class="p-2">الوجهة</th>
                                 <th class="p-2">ملاحظات</th>
                                 <th class="p-2">سجّلها / وقت التسجيل</th>
-                                @can('admin')<th class="p-2 w-20">تحكم</th>@endcan
+                                @can('admin')<th>الإجراءات</th>@endcan
                             </tr>
                         </thead>
                         <tbody id="modal-history-body"></tbody>
@@ -286,178 +284,66 @@
         </div>
     </div>
 
-    <div id="edit-item-modal"
-        class="fixed inset-0 bg-black bg-opacity-60 hidden z-[60] flex justify-center items-center backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 relative">
-            <h3 class="text-xl font-bold mb-4 text-blue-900">✏️ تعديل بيانات العنصر</h3>
-            <form id="edit-item-form" method="POST" class="grid grid-cols-2 gap-4">
-                @csrf @method('PUT')
-                <input type="text" name="name" id="edit-name" class="border p-2 rounded" required placeholder="الاسم">
-                <input type="text" name="category" id="edit-category" class="border p-2 rounded" required
-                    placeholder="التصنيف">
-                <input type="text" name="manufacturer" id="edit-manufacturer" class="border p-2 rounded"
-                    placeholder="المصنع">
-                <input type="text" name="model_type" id="edit-model" class="border p-2 rounded" placeholder="الموديل">
-                <input type="text" name="serial_number" id="edit-sn" class="border p-2 rounded" placeholder="SN">
-                <input type="text" name="reciever" id="edit-receiver" class="border p-2 rounded" placeholder="المستلم">
-                <input type="datetime-local" name="added_at" id="edit-date" class="border p-2 rounded text-right"
-                    required max="{{ now()->format('Y-m-d\TH:i') }}">
-                <textarea name="description" id="edit-desc" class="col-span-2 border p-2 rounded" rows="2"
-                    placeholder="وصف"></textarea>
-
-                <div class="col-span-2 flex gap-2 mt-4">
-                    <button type="submit"
-                        class="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 flex-1">حفظ
-                        التعديلات</button>
-                    <button type="button" onclick="document.getElementById('edit-item-modal').classList.add('hidden')"
-                        class="bg-gray-200 px-6 py-2 rounded font-bold hover:bg-gray-300">إلغاء</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="edit-out-modal"
-        class="fixed inset-0 bg-black bg-opacity-60 hidden z-[60] flex justify-center items-center backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 relative border-t-4 border-yellow-500">
-            <h3 class="text-xl font-bold mb-4">✏️ تعديل عملية السحب</h3>
-            <form id="edit-out-form" method="POST" class="space-y-3">
-                @csrf @method('PUT')
-                <div>
-                    <label class="block text-xs font-bold text-gray-500">الوجهة</label>
-                    <input type="text" name="destination" id="edit-out-destination" class="w-full border p-2 rounded">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500">التاريخ</label>
-                    <input type="datetime-local" name="date" id="edit-out-date"
-                        class="w-full border p-2 rounded text-right" required max="{{ now()->format('Y-m-d\TH:i') }}">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500">ملاحظات</label>
-                    <textarea name="note" id="edit-out-note" class="w-full border p-2 rounded"></textarea>
-                </div>
-                <div class="flex gap-2 mt-4">
-                    <button type="submit"
-                        class="bg-yellow-500 text-white px-6 py-2 rounded font-bold hover:bg-yellow-600 flex-1">تحديث</button>
-                    <button type="button" onclick="document.getElementById('edit-out-modal').classList.add('hidden')"
-                        class="bg-gray-200 px-6 py-2 rounded font-bold">إلغاء</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="remove-modal"
-        class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex justify-center items-center backdrop-blur-sm"
-        onclick="closeModalIfOutside(event, 'remove-modal')">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 relative border-t-4 border-red-500">
-            <div class="mb-4">
-                <h3 class="text-xl font-bold text-red-600">سحب من المخزن</h3>
-                <p class="text-sm text-gray-500">العنصر: <span id="remove-item-name"
-                        class="font-bold text-black">...</span></p>
-                <p class="text-xs text-gray-400">المتوفر: <span id="remove-item-stock">0</span></p>
-            </div>
-            <form action="{{ route('storage.out') }}" method="POST" class="space-y-3">
-                @csrf
-                <input type="hidden" name="product_in_id" id="remove-id">
-                <input type="number" name="quantity" id="remove-qty" min="1"
-                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300" required
-                    placeholder="الكمية">
-                <input type="text" name="destination"
-                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300"
-                    placeholder="الوجهة (اختياري)">
-                <input type="datetime-local" name="date" value="{{ now()->format('Y-m-d\TH:i') }}"
-                    max="{{ now()->format('Y-m-d\TH:i') }}"
-                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300 text-right" required>
-                <textarea name="note" rows="2"
-                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-red-300"
-                    placeholder="ملاحظات"></textarea>
-                <div class="mt-6 flex gap-2">
-                    <button type="submit"
-                        class="flex-1 bg-red-600 text-white py-2 rounded font-bold hover:bg-red-700 transition">تأكيد
-                        السحب</button>
-                    <button type="button" onclick="document.getElementById('remove-modal').classList.add('hidden')"
-                        class="px-4 py-2 bg-gray-200 rounded font-bold hover:bg-gray-300">إلغاء</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="add-modal"
-        class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex justify-center items-center backdrop-blur-sm"
-        onclick="closeModalIfOutside(event, 'add-modal')">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 relative border-t-4 border-green-500">
-            <div class="mb-4">
-                <h3 class="text-xl font-bold text-green-600">إضافة كمية (دفعة جديدة)</h3>
-                <p class="text-sm text-gray-500">العنصر: <span id="add-item-name"
-                        class="font-bold text-black">...</span></p>
-            </div>
-            <form action="{{ route('storage.addition') }}" method="POST" class="space-y-3">
-                @csrf
-                <input type="hidden" name="product_in_id" id="add-id">
-                <input type="number" name="quantity" min="1"
-                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-green-300" required
-                    placeholder="الكمية المضافة" value="1">
-                <input type="text" name="source"
-                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-green-300"
-                    placeholder="المصدر (اختياري)">
-                <input type="datetime-local" name="date" value="{{ now()->format('Y-m-d\TH:i') }}"
-                    max="{{ now()->format('Y-m-d\TH:i') }}"
-                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-green-300 text-right" required>
-                <textarea name="note" rows="2"
-                    class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-green-300"
-                    placeholder="ملاحظات"></textarea>
-                <div class="mt-6 flex gap-2">
-                    <button type="submit"
-                        class="flex-1 bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700 transition">تأكيد
-                        الإضافة</button>
-                    <button type="button" onclick="document.getElementById('add-modal').classList.add('hidden')"
-                        class="px-4 py-2 bg-gray-200 rounded font-bold hover:bg-gray-300">إلغاء</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="edit-addition-modal"
-        class="fixed inset-0 bg-black bg-opacity-60 hidden z-[60] flex justify-center items-center backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 relative border-t-4 border-yellow-500">
-            <h3 class="text-xl font-bold mb-4">✏️ تعديل عملية الإضافة</h3>
-            <form id="edit-addition-form" method="POST" class="space-y-3">
-                @csrf @method('PUT')
-                <div>
-                    <label class="block text-xs font-bold text-gray-500">المصدر</label>
-                    <input type="text" name="source" id="edit-addition-source" class="w-full border p-2 rounded">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500">التاريخ</label>
-                    <input type="datetime-local" name="date" id="edit-addition-date"
-                        class="w-full border p-2 rounded text-right" required max="{{ now()->format('Y-m-d\TH:i') }}">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500">ملاحظات</label>
-                    <textarea name="note" id="edit-addition-note" class="w-full border p-2 rounded"></textarea>
-                </div>
-                <div class="flex gap-2 mt-4">
-                    <button type="submit"
-                        class="bg-yellow-500 text-white px-6 py-2 rounded font-bold hover:bg-yellow-600 flex-1">تحديث</button>
-                    <button type="button" onclick="document.getElementById('edit-addition-modal').classList.add('hidden')"
-                        class="bg-gray-200 px-6 py-2 rounded font-bold">إلغاء</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    @include('storage.partials.operation-dialogs')
     <script>
         // 1. Base URL
         const APP_URL = "{{ url('/') }}";
 
         // 2. Data from Controller
-        const historyData = @json($products->mapWithKeys(fn($i) => [$i->id => $i->outs]));
-        const additionsData = @json($products->mapWithKeys(fn($i) => [$i->id => $i->additions]));
         let currentItemData = {};
 
         function escHtml(s) {
             return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[c]));
         }
-        function escJs(s) { return escHtml((s ?? '').toString().replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/[\r\n]/g, ' ')); }
+
+        // One visible dialog; closing a correction returns to the same item details.
+        const modalStack = [];
+        const focusableSelector = 'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), summary, [tabindex="0"]';
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            const previous = modalStack[modalStack.length - 1];
+            if (previous?.id === id) return;
+            const trigger = document.activeElement;
+            if (previous) document.getElementById(previous.id).classList.add('hidden');
+            modalStack.push({ id, trigger });
+            modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+            modal.focus();
+            document.querySelectorAll('[data-page-content]').forEach(el => el.inert = true);
+        }
+
+        function closeModal(id) {
+            if (modalStack[modalStack.length - 1]?.id !== id) return;
+            const closed = modalStack.pop();
+            document.getElementById(id).classList.add('hidden');
+            const previous = modalStack[modalStack.length - 1];
+            if (previous) {
+                document.getElementById(previous.id).classList.remove('hidden');
+            } else {
+                document.body.classList.remove('modal-open');
+                document.querySelectorAll('[data-page-content]').forEach(el => el.inert = false);
+            }
+            if (closed.trigger?.isConnected) closed.trigger.focus();
+        }
+
+        document.addEventListener('keydown', event => {
+            const current = modalStack[modalStack.length - 1];
+            if (!current) return;
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeModal(current.id);
+            } else if (event.key === 'Tab') {
+                const modal = document.getElementById(current.id);
+                const controls = [...modal.querySelectorAll(focusableSelector)].filter(el => el.getClientRects().length);
+                const first = controls[0], last = controls[controls.length - 1];
+                if (event.shiftKey && (document.activeElement === first || document.activeElement === modal)) {
+                    event.preventDefault(); last?.focus();
+                } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === modal)) {
+                    event.preventDefault(); first?.focus();
+                }
+            }
+        });
 
         function formatDates(iso) {
             const d = new Date(iso);
@@ -465,6 +351,44 @@
             const pad = (n) => String(n).padStart(2, '0');
             const inputDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
             return { displayDate, inputDate };
+        }
+
+        function openCancelModal(kind, id) {
+            document.getElementById('cancel-form').action = `${APP_URL}/storage/${kind}/${id}`;
+            document.getElementById('cancel-title').textContent = kind === 'item' ? 'أرشفة العنصر' : 'إلغاء العملية';
+            document.getElementById('cancel-explanation').textContent = kind === 'item'
+                ? 'يمكن أرشفة الصنف إذا كان رصيده صفراً. ستبقى جميع سجلاته متاحة.'
+                : kind === 'out' ? 'ستعاد الكمية للمخزون مع الاحتفاظ بالعملية الأصلية وسجل الإلغاء.'
+                : 'ستخصم الكمية من الرصيد إذا كانت متاحة، مع الاحتفاظ بالعملية الأصلية وسجل الإلغاء.';
+            document.getElementById('cancel-reason').value = '';
+            document.getElementById('cancel-item-name').textContent = currentItemData.name;
+            const movement = kind === 'item' ? null : (kind === 'out' ? currentItemData.outs : currentItemData.additions).find(m => m.id === id);
+            document.getElementById('cancel-operation').textContent = movement ? `${kind === 'out' ? 'سحب' : 'إضافة'} #${id} · ${movement.quantity} وحدة` : 'أرشفة الصنف';
+            document.getElementById('cancel-submit').textContent = kind === 'item' ? 'تأكيد الأرشفة' : 'تأكيد الإلغاء';
+            openModal('cancel-modal');
+            document.getElementById('cancel-reason').focus();
+        }
+
+        function renderMovements(bodyId, emptyId, movements, kind) {
+            document.getElementById(emptyId).classList.toggle('hidden', movements.length > 0);
+            document.getElementById(bodyId).innerHTML = movements.map(m => {
+                const cancelled = !!m.cancelled_at;
+                const cancellation = cancelled ? `<span class="status-badge status-red mt-2">ملغاة — لا تؤثر على الرصيد الحالي</span><span class="cancellation-copy">${escHtml(m.cancelled_by_name)} · ${escHtml(formatDates(m.cancelled_at).displayDate)} · ${escHtml(m.cancellation_reason)}</span>` : '';
+                let controls = '';
+                @can('admin')
+                if (!cancelled && !currentItemData.archived) {
+                    controls = `<div class="movement-actions"><button type="button" onclick="${kind === 'out' ? 'openEditOutModal' : 'openEditAdditionModal'}(${m.id})" class="ui-button ui-button-warning-soft ui-button-small"><x-icon name="edit" />تعديل</button><button type="button" onclick="openCancelModal('${kind}', ${m.id})" class="ui-button ui-button-danger-soft ui-button-small"><x-icon name="cancel" />إلغاء العملية</button></div>`;
+                }
+                @endcan
+                return `<tr class="border-b ${cancelled ? 'cancelled-row' : ''}">
+                    <td class="p-2 text-gray-600">${escHtml(formatDates(m.date).displayDate)}</td>
+                    <td class="p-2 font-bold ${cancelled ? 'line-through text-gray-500' : kind === 'out' ? 'text-red-600' : 'text-green-600'}">${kind === 'out' ? '-' : '+'}${m.quantity}</td>
+                    <td class="p-2">${escHtml((kind === 'out' ? m.destination : m.source) || '-')}</td>
+                    <td class="p-2 text-xs text-gray-600">${escHtml(m.note || '-')}${cancellation}</td>
+                    <td class="p-2 text-xs"><span class="block font-bold">${escHtml(m.recorded_by_label)}</span><span class="block whitespace-nowrap text-gray-500" dir="ltr">${escHtml(m.recorded_at_display)}</span></td>
+                    @can('admin')<td class="p-2">${controls}</td>@endcan
+                </tr>`;
+            }).join('');
         }
 
         // --- OPEN DETAILS MODAL ---
@@ -481,6 +405,9 @@
                 desc: btn.getAttribute('data-desc'),
                 recordedBy: btn.getAttribute('data-recorded-by'),
                 recordedAt: btn.getAttribute('data-recorded-at'),
+                archived: btn.getAttribute('data-archived') === '1',
+                outs: JSON.parse(btn.getAttribute('data-outs') || '[]'),
+                additions: JSON.parse(btn.getAttribute('data-additions') || '[]'),
             };
 
             // Fill Static Data
@@ -489,7 +416,7 @@
             document.getElementById('modal-manufacturer').innerText = currentItemData.manufacturer || '-';
             document.getElementById('modal-model').innerText = currentItemData.model || '-';
             document.getElementById('modal-receiver').innerText = currentItemData.receiver || '-';
-            document.getElementById('modal-date').innerText = currentItemData.date;
+            document.getElementById('modal-date').innerText = currentItemData.date.replace('T', ' · ');
             document.getElementById('modal-desc').innerText = currentItemData.desc || '-';
             document.getElementById('modal-sn').innerText = currentItemData.sn || '-';
             document.getElementById('modal-recorded-by').innerText = currentItemData.recordedBy;
@@ -498,82 +425,14 @@
             // Set Delete Action
             @can('admin')
             document.getElementById('delete-item-form').action = `${APP_URL}/storage/item/${currentItemData.id}`;
+            document.getElementById('delete-item-form').classList.toggle('hidden', currentItemData.archived);
+            document.getElementById('edit-item-button').classList.toggle('hidden', currentItemData.archived);
+            document.getElementById('item-history-link').href = `${APP_URL}/storage/item/${currentItemData.id}/history`;
             @endcan
 
-            // Build Additions Table
-            const additionsTbody = document.getElementById('modal-additions-body');
-            additionsTbody.innerHTML = '';
-            const additions = additionsData[currentItemData.id] || [];
-
-            if (additions.length > 0) {
-                document.getElementById('modal-no-additions').classList.add('hidden');
-                additions.forEach(add => {
-                    const { displayDate, inputDate } = formatDates(add.date);
-
-                    const row = `
-                    <tr class="border-b border-gray-100 hover:bg-white group">
-                        <td class="p-2 text-gray-600 dir-ltr text-right">${displayDate}</td>
-                        <td class="p-2 font-bold text-green-600">+${add.quantity}</td>
-                        <td class="p-2 text-gray-800">${escHtml(add.source || '-')}</td>
-                        <td class="p-2 text-gray-500 text-xs">${escHtml(add.note || '-')}</td>
-                        <td class="p-2 text-xs"><span class="block font-bold">${escHtml(add.recorded_by_label)}</span><span class="block whitespace-nowrap text-gray-500" dir="ltr">${escHtml(add.recorded_at_display)}</span></td>
-                        @can('admin')
-                        <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="openEditAdditionModal(${add.id}, '${escJs(add.source)}', '${inputDate}', '${escJs(add.note)}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                            </button>
-
-                            <form action="${APP_URL}/storage/addition/${add.id}" method="POST" onsubmit="return confirm('هل تريد حذف عملية الإضافة هذه؟')">
-                                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'}">
-                                <input type="hidden" name="_method" value="DELETE">
-                                <button type="submit" class="text-red-500 hover:bg-red-100 p-1 rounded" title="حذف الإضافة"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                            </form>
-                        </td>
-                        @endcan
-                    </tr>`;
-                    additionsTbody.innerHTML += row;
-                });
-            } else {
-                document.getElementById('modal-no-additions').classList.remove('hidden');
-            }
-
-            // Build History Table
-            const tbody = document.getElementById('modal-history-body');
-            tbody.innerHTML = '';
-            const outs = historyData[currentItemData.id] || [];
-
-            if (outs.length > 0) {
-                document.getElementById('modal-no-history').classList.add('hidden');
-                outs.forEach(out => {
-                    const { displayDate, inputDate } = formatDates(out.date);
-
-                    const row = `
-                    <tr class="border-b border-gray-100 hover:bg-white group">
-                        <td class="p-2 text-gray-600 dir-ltr text-right">${displayDate}</td>
-                        <td class="p-2 font-bold text-red-600">-${out.quantity}</td>
-                        <td class="p-2 text-gray-800">${escHtml(out.destination || '-')}</td>
-                        <td class="p-2 text-gray-500 text-xs">${escHtml(out.note || '-')}</td>
-                        <td class="p-2 text-xs"><span class="block font-bold">${escHtml(out.recorded_by_label)}</span><span class="block whitespace-nowrap text-gray-500" dir="ltr">${escHtml(out.recorded_at_display)}</span></td>
-                        @can('admin')
-                        <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="openEditOutModal(${out.id}, '${escJs(out.destination)}', '${inputDate}', '${escJs(out.note)}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                            </button>
-                            
-                            <form action="${APP_URL}/storage/out/${out.id}" method="POST" onsubmit="return confirm('هل تريد استرجاع هذه الكمية للمخزن؟')">
-                                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'}">
-                                <input type="hidden" name="_method" value="DELETE">
-                                <button type="submit" class="text-red-500 hover:bg-red-100 p-1 rounded" title="إلغاء السحب"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                            </form>
-                        </td>
-                        @endcan
-                    </tr>`;
-                    tbody.innerHTML += row;
-                });
-            } else {
-                document.getElementById('modal-no-history').classList.remove('hidden');
-            }
-            document.getElementById('details-modal').classList.remove('hidden');
+            renderMovements('modal-additions-body', 'modal-no-additions', currentItemData.additions, 'addition');
+            renderMovements('modal-history-body', 'modal-no-history', currentItemData.outs, 'out');
+            openModal('details-modal');
         }
 
         function openEditItemModal() {
@@ -586,30 +445,41 @@
             document.getElementById('edit-receiver').value = currentItemData.receiver;
             document.getElementById('edit-date').value = currentItemData.date; // Ensure this is also formatted similarly if needed
             document.getElementById('edit-desc').value = currentItemData.desc;
-            document.getElementById('edit-item-modal').classList.remove('hidden');
+            document.querySelector('#edit-item-form [name="reason"]').value = '';
+            openModal('edit-item-modal');
         }
 
-        function openEditOutModal(id, dest, date, note) {
+        function openEditOutModal(id) {
+            const record = currentItemData.outs.find(m => m.id === id);
+            const dest = record.destination, note = record.note, date = formatDates(record.date).inputDate;
             document.getElementById('edit-out-form').action = `${APP_URL}/storage/out/${id}`;
             document.getElementById('edit-out-destination').value = dest !== 'null' ? dest : '';
             // FIX: The 'date' passed here is now the clean 'inputDate' string
             document.getElementById('edit-out-date').value = date;
             document.getElementById('edit-out-note').value = note !== 'null' ? note : '';
-            document.getElementById('edit-out-modal').classList.remove('hidden');
+            document.getElementById('edit-out-reason').value = '';
+            document.getElementById('edit-out-item-name').textContent = currentItemData.name;
+            document.getElementById('edit-out-quantity').textContent = `سحب #${id} · ${record.quantity} وحدة`;
+            openModal('edit-out-modal');
         }
 
-        function openEditAdditionModal(id, source, date, note) {
+        function openEditAdditionModal(id) {
+            const record = currentItemData.additions.find(m => m.id === id);
+            const source = record.source, note = record.note, date = formatDates(record.date).inputDate;
             document.getElementById('edit-addition-form').action = `${APP_URL}/storage/addition/${id}`;
             document.getElementById('edit-addition-source').value = source !== 'null' ? source : '';
             document.getElementById('edit-addition-date').value = date;
             document.getElementById('edit-addition-note').value = note !== 'null' ? note : '';
-            document.getElementById('edit-addition-modal').classList.remove('hidden');
+            document.getElementById('edit-addition-reason').value = '';
+            document.getElementById('edit-addition-item-name').textContent = currentItemData.name;
+            document.getElementById('edit-addition-quantity').textContent = `إضافة #${id} · ${record.quantity} وحدة`;
+            openModal('edit-addition-modal');
         }
 
         function openAddModal(id, name) {
             document.getElementById('add-id').value = id;
             document.getElementById('add-item-name').innerText = name;
-            document.getElementById('add-modal').classList.remove('hidden');
+            openModal('add-modal');
         }
 
         function openRemoveModal(id, name, max) {
@@ -618,10 +488,10 @@
             document.getElementById('remove-item-stock').innerText = max;
             document.getElementById('remove-qty').max = max;
             document.getElementById('remove-qty').value = 1;
-            document.getElementById('remove-modal').classList.remove('hidden');
+            openModal('remove-modal');
         }
 
-        function closeModalIfOutside(e, id) { if (e.target.id === id) document.getElementById(id).classList.add('hidden'); }
+        function closeModalIfOutside(e, id) { if (e.target.id === id) closeModal(id); }
 
         // Live Search + Export link sync
         const searchInput = document.getElementById('search-input');
@@ -654,7 +524,9 @@
                     url.searchParams.set('search', searchInput.value);
                     window.history.pushState({}, '', url);
                     fetch(url).then(r => r.text()).then(html => {
-                        resultsContainer.innerHTML = new DOMParser().parseFromString(html, 'text/html').getElementById('results-container').innerHTML;
+                        const page = new DOMParser().parseFromString(html, 'text/html');
+                        resultsContainer.innerHTML = page.getElementById('results-container').innerHTML;
+                        document.getElementById('inventory-count').textContent = page.getElementById('inventory-count').textContent;
                         resultsContainer.style.opacity = '1';
                     });
                 }, 500);

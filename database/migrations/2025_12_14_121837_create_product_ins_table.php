@@ -26,6 +26,7 @@ return new class extends Migration
             $table->timestamp('added_at');
             $table->foreignId('created_by')->nullable()->constrained('users')->restrictOnDelete();
             $table->string('created_by_name')->nullable();
+            $table->timestamp('archived_at')->nullable();
             $table->timestamps(); // Created_at, Updated_at
         });
     }

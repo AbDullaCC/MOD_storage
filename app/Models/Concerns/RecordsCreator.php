@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 trait RecordsCreator
 {
+    public static function bootRecordsCreator(): void
+    {
+        static::deleting(fn () => throw new \LogicException('Inventory records must be cancelled or archived, never deleted.'));
+    }
+
     /** Save the operation and its server-supplied attribution in one insert. */
     public static function createRecorded(array $attributes, User $user): static
     {

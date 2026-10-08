@@ -26,17 +26,18 @@
             }
         }
     </style>
+    @include('partials.app-styles')
 </head>
 
-<body class="bg-gray-100 p-10">
+<body class="app-shell">
 
     @include('partials.account-nav')
 
-    <div class="max-w-6xl mx-auto">
+    <div class="app-content">
 
-        <div class="flex justify-between items-center mb-6">
+        <div class="page-heading">
             <div>
-                <h1 class="text-3xl font-bold text-gray-800">📊 تقرير حركة المخزن</h1>
+                <div class="eyebrow">المخزون / التقارير</div><h1>تقرير حركة المخزن</h1>
                 <p class="text-gray-500 mt-1">
                     @if($dateInputs['start'] == '2000-01-01')
                         عرض <span class="font-bold text-blue-600">كل السجلات</span> (من البداية)
@@ -47,12 +48,12 @@
                 </p>
             </div>
             <a href="{{ route('storage.index') }}"
-                class="no-print bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 font-bold transition">
-                عودة للمخزن ↩
+                class="no-print ui-button">
+                <x-icon name="arrow" /> عودة للمخزن
             </a>
         </div>
 
-        <div class="no-print bg-white p-6 rounded-lg shadow-md mb-8">
+        <div class="no-print ui-panel p-6 mb-8">
             <form action="{{ route('storage.report') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
 
@@ -86,26 +87,26 @@
 
                 </div>
 
-                <div class="flex gap-2 mt-4">
+                <div class="flex flex-wrap gap-2 mt-4">
                     <button type="submit"
-                        class="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 transition">
-                        تصفية النتائج 🔍
+                        class="ui-button ui-button-primary">
+                        <x-icon name="search" /> تصفية النتائج
                     </button>
 
                     <button type="submit" name="show_all" value="1"
-                        class="bg-gray-500 text-white px-6 py-2 rounded font-bold hover:bg-gray-600 transition">
-                        عرض كل السجلات 📅
+                        class="ui-button">
+                        <x-icon name="history" /> عرض كل السجلات
                     </button>
 
                     <button type="button" onclick="window.print()"
-                        class="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 transition mr-auto">
+                        class="ui-button mr-auto">
                         🖨️ طباعة
                     </button>
                 </div>
             </form>
         </div>
 
-        <p class="text-sm text-gray-500 mb-3">تاريخ العملية هو التاريخ المُدخل. وقت التسجيل هو وقت حفظها في النظام ({{ config('app.timezone') }}).</p>
+        <p class="text-sm text-gray-500 mb-3">تاريخ العملية هو التاريخ المُدخل. وقت التسجيل هو وقت حفظها في النظام ({{ config('app.timezone') }}). تظهر العمليات الملغاة للاطلاع ولا تُحتسب في الرصيد الحالي.</p>
         <div class="bg-white shadow-lg rounded-lg overflow-x-auto border print-border">
             <table class="w-full text-right">
                 <thead class="bg-gray-200 text-gray-700 border-b print-border">
@@ -152,7 +153,13 @@
 
                             <td class="p-4 text-gray-600">{{ $trans['party'] }}</td>
 
-                            <td class="p-4 text-sm text-gray-500">{{ $trans['note'] }}</td>
+                            <td class="p-4 text-sm text-gray-500">
+                                {{ $trans['note'] }}
+                                @if($trans['cancelled'])
+                                    <span class="block font-bold text-red-700 mt-1">ملغاة — لا تؤثر على الرصيد الحالي</span>
+                                    <span class="block">{{ $trans['cancellation_details'] }}</span>
+                                @endif
+                            </td>
                             <td class="p-4 text-sm">
                                 <span class="block font-bold text-gray-700">{{ $trans['recorded_by'] }}</span>
                                 <span class="block text-xs text-gray-500 whitespace-nowrap" dir="ltr">{{ $trans['recorded_at'] }}</span>

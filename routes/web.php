@@ -38,6 +38,8 @@ Route::middleware(['auth', 'active', 'auth.session'])->group(function () {
     // Edit/Delete ITEMS
     Route::middleware('can:admin')->group(function () {
         Route::resource('users', UserController::class)->except(['show', 'destroy']);
+        Route::get('/storage/item/{id}/history', [StorageController::class, 'history'])->name('storage.history');
+        Route::post('/storage/item/{id}/restore', [StorageController::class, 'restoreItem'])->name('storage.restoreItem');
         Route::put('/storage/item/{id}', [StorageController::class, 'updateItem'])->name('storage.updateItem');
         Route::delete('/storage/item/{id}', [StorageController::class, 'destroyItem'])->name('storage.destroyItem');
 

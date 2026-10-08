@@ -96,6 +96,7 @@ class OperationAttributionTest extends TestCase
             $payload = [
                 'name' => 'Changed item', 'category' => 'Test', 'added_at' => now()->subDay()->toDateTimeString(),
                 'date' => now()->subDay()->toDateTimeString(), 'note' => 'Corrected',
+                'reason' => 'Correct operation details',
                 'created_by' => $admin->id, 'created_by_name' => 'Forged replacement', 'created_at' => now()->toDateTimeString(),
             ];
             $this->put('/storage/'.$resource.'/'.$record->id, $payload)->assertSessionHasNoErrors()->assertRedirect();
@@ -120,7 +121,7 @@ class OperationAttributionTest extends TestCase
             ->assertSee($item->recorded_at_display)->assertSee('تاريخ العملية')->assertSee('وقت التسجيل');
         $rows = collect($response->viewData('transactions')->items());
         $this->assertCount(3, $rows);
-        $this->assertEqualsCanonicalizing(['رصيد افتتاحي', 'إضافة كمية', 'سحب'], $rows->pluck('action_label')->all());
+        $this->assertEqualsCanonicalizing(['إنشاء صنف جديد', 'إضافة كمية', 'سحب'], $rows->pluck('action_label')->all());
         $this->assertSame([$actor->name], $rows->pluck('recorded_by')->unique()->values()->all());
         $this->assertSame([$item->recorded_at_display], $rows->pluck('recorded_at')->unique()->values()->all());
     }
@@ -145,7 +146,7 @@ class OperationAttributionTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'admin']))
             ->get('/storage/report?show_all=1')->assertOk()->assertSee('سجل سابق / المستخدم غير معروف');
         $this->get('/storage')->assertOk()->assertSee('سجل سابق / المستخدم غير معروف');
-        $this->put('/storage/item/'.$itemId, ['name' => 'Edited legacy item', 'category' => 'Test', 'added_at' => $stamp])
+        $this->put('/storage/item/'.$itemId, ['name' => 'Edited legacy item', 'category' => 'Test', 'added_at' => $stamp, 'reason' => 'Correct legacy name'])
             ->assertSessionHasNoErrors();
         $this->assertNull(ProductIn::findOrFail($itemId)->created_by);
         $this->assertSame($stamp, ProductIn::findOrFail($itemId)->recorded_at_display);
@@ -172,7 +173,7 @@ class OperationAttributionTest extends TestCase
         [$item] = $this->createOperations($actor);
         $this->post('/storage', ['name' => 'Invalid item'])->assertSessionHasErrors();
         $this->post('/storage/addition', ['product_in_id' => $item->id, 'quantity' => 0, 'date' => now()->toDateTimeString()])->assertSessionHasErrors();
-        $this->post('/storage/out', ['product_in_id' => $item->id, 'quantity' => 1000, 'date' => now()->toDateTimeString()])->assertSessionHas('error');
+        $this->post('/storage/out', ['product_in_id' => $item->id, 'quantity' => 1000, 'date' => now()->toDateTimeString()])->assertSessionHasErrors('inventory');
         $this->assertDatabaseCount('product_ins', 1);
         $this->assertDatabaseCount('additions', 1);
         $this->assertDatabaseCount('outs', 1);

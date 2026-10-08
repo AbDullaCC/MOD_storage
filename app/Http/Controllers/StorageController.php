@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Addition;
+use App\Models\InventoryAudit;
 use App\Models\Out;
 use App\Models\ProductIn;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class StorageController extends Controller
 {
+    public function __construct(private InventoryService $inventory) {}
+
     // Show the dashboard / list
     public function index(Request $request)
     {
@@ -22,11 +26,17 @@ class StorageController extends Controller
             },
         ]);
 
+        if (! $request->boolean('include_archived')) {
+            $query->whereNull('archived_at');
+        }
+
         if ($request->has('search')) {
             $search = $request->get('search');
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('serial_number', 'like', "%{$search}%")
-                ->orWhere('category', 'like', "%{$search}%");
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('serial_number', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%");
+            });
         }
 
         // CHANGED: get() -> paginate(20)
@@ -39,8 +49,9 @@ class StorageController extends Controller
     // Export inventory to CSV (Excel-compatible)
     public function export(Request $request)
     {
-        $query = ProductIn::withSum('additions as additions_sum', 'quantity')
-            ->withSum('outs as outs_sum', 'quantity');
+        $query = ProductIn::whereNull('archived_at')
+            ->withSum(['additions as additions_sum' => fn ($q) => $q->whereNull('cancelled_at')], 'quantity')
+            ->withSum(['outs as outs_sum' => fn ($q) => $q->whereNull('cancelled_at')], 'quantity');
 
         $search = $request->get('search');
         if (is_string($search) && trim($search) !== '') {
@@ -112,7 +123,7 @@ class StorageController extends Controller
             'added_at.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ في المستقبل!',
         ]);
 
-        ProductIn::createRecorded($validated, $request->user());
+        $this->inventory->createItem($validated, $request->user());
 
         return back()->with('success', 'تمت إضافة العنصر بنجاح!');
     }
@@ -133,13 +144,7 @@ class StorageController extends Controller
             'date.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ سحب في المستقبل!',
         ]);
 
-        $product = ProductIn::find($request->product_in_id);
-
-        if ($validated['quantity'] > $product->current_stock) {
-            return back()->with('error', 'خطأ: الكمية المطلوبة غير متوفرة في المخزون!');
-        }
-
-        Out::createRecorded($validated, $request->user());
+        $this->inventory->createMovement(Out::class, $validated, $request->user());
 
         return back()->with('success', 'تم سحب العنصر من المخزن بنجاح!');
     }
@@ -158,7 +163,7 @@ class StorageController extends Controller
             'date.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ إضافة في المستقبل!',
         ]);
 
-        Addition::createRecorded($validated, $request->user());
+        $this->inventory->createMovement(Addition::class, $validated, $request->user());
 
         return back()->with('success', 'تمت إضافة الكمية للمخزون بنجاح!');
     }
@@ -181,17 +186,16 @@ class StorageController extends Controller
         ]);
 
         // Note: We deliberately do NOT update 'quantity' here.
-        $item->update($validated);
+        $this->inventory->edit(ProductIn::class, (int) $id, $validated, $this->reason($request), $request->user());
 
         return back()->with('success', 'تم تعديل بيانات العنصر بنجاح!');
     }
 
-    public function destroyItem($id)
+    public function destroyItem(Request $request, $id)
     {
-        $item = ProductIn::findOrFail($id);
-        $item->delete(); // This deletes the item AND all its removal history
+        $this->inventory->archive((int) $id, $this->reason($request), $request->user());
 
-        return back()->with('success', 'تم حذف العنصر وجميع سجلاته نهائياً.');
+        return back()->with('success', 'تمت أرشفة العنصر مع الاحتفاظ بجميع سجلاته.');
     }
 
     // --- UPDATE/DELETE REMOVALS ---
@@ -207,15 +211,14 @@ class StorageController extends Controller
         ]);
 
         // Quantity is excluded from update
-        $out->update($validated);
+        $this->inventory->edit(Out::class, (int) $id, $validated, $this->reason($request), $request->user());
 
         return back()->with('success', 'تم تعديل بيانات السحب بنجاح.');
     }
 
-    public function destroyOut($id)
+    public function destroyOut(Request $request, $id)
     {
-        $out = Out::findOrFail($id);
-        $out->delete(); // Stock is automatically recalculated
+        $this->inventory->cancel(Out::class, (int) $id, $this->reason($request), $request->user());
 
         return back()->with('success', 'تم إلغاء عملية السحب واسترجاع الكمية للمخزن.');
     }
@@ -233,29 +236,36 @@ class StorageController extends Controller
         ]);
 
         // Quantity is excluded from update
-        $addition->update($validated);
+        $this->inventory->edit(Addition::class, (int) $id, $validated, $this->reason($request), $request->user());
 
         return back()->with('success', 'تم تعديل بيانات الإضافة بنجاح.');
     }
 
-    public function destroyAddition($id)
+    public function destroyAddition(Request $request, $id)
     {
-        $addition = Addition::findOrFail($id);
+        $this->inventory->cancel(Addition::class, (int) $id, $this->reason($request), $request->user());
 
-        $product = $addition->productIn;
-        if ($product) {
-            $stockWithoutThis = $product->quantity
-                + (int) $product->additions()->where('id', '!=', $addition->id)->sum('quantity')
-                - (int) $product->outs()->sum('quantity');
+        return back()->with('success', 'تم إلغاء الإضافة مع الاحتفاظ بسجلها.');
+    }
 
-            if ($stockWithoutThis < 0) {
-                return back()->with('error', 'خطأ: لا يمكن حذف هذه الإضافة لأن جزءاً منها تم سحبه من المخزون!');
-            }
-        }
+    public function restoreItem(Request $request, $id)
+    {
+        $this->inventory->archive((int) $id, $this->reason($request), $request->user(), true);
 
-        $addition->delete(); // Stock is automatically recalculated
+        return back()->with('success', 'تمت إعادة تفعيل العنصر.');
+    }
 
-        return back()->with('success', 'تم حذف عملية الإضافة بنجاح.');
+    public function history($id)
+    {
+        $product = ProductIn::findOrFail($id);
+        $events = InventoryAudit::where('product_in_id', $product->id)->orderByDesc('id')->paginate(20);
+
+        return view('storage.history', compact('product', 'events'));
+    }
+
+    private function reason(Request $request): string
+    {
+        return $request->validate(['reason' => 'required|string|min:3|max:1000'])['reason'];
     }
 
     // --- REPORT METHOD ---
@@ -295,14 +305,16 @@ class StorageController extends Controller
                 return [
                     'type' => 'in',
                     'date' => $item->added_at, // Assumes you added 'datetime' cast to Model
-                    'action_label' => 'رصيد افتتاحي',
+                    'action_label' => 'إنشاء صنف جديد',
+                    'cancelled' => false,
+                    'cancellation_details' => null,
                     'recorded_by' => $item->recorded_by_label,
                     'recorded_at' => $item->recorded_at_display,
                     'name' => $item->name,
                     'quantity' => $item->quantity,
                     'sn' => $item->serial_number,
                     'party' => $item->reciever,
-                    'note' => 'إضافة مخزنية (رصيد افتتاحي)',
+                    'note' => 'إنشاء صنف جديد وتسجيل كميته',
                 ];
             });
 
@@ -325,6 +337,8 @@ class StorageController extends Controller
                     'type' => 'in',
                     'date' => $item->date,
                     'action_label' => 'إضافة كمية',
+                    'cancelled' => (bool) $item->cancelled_at,
+                    'cancellation_details' => $item->cancelled_at ? $item->cancelled_by_name.' — '.$item->cancelled_at->format('Y-m-d H:i:s').' — '.$item->cancellation_reason : null,
                     'recorded_by' => $item->recorded_by_label,
                     'recorded_at' => $item->recorded_at_display,
                     'name' => $item->productIn->name ?? 'عنصر محذوف',
@@ -360,6 +374,8 @@ class StorageController extends Controller
                     'type' => 'out',
                     'date' => $item->date, // Assumes you added 'datetime' cast to Model
                     'action_label' => 'سحب',
+                    'cancelled' => (bool) $item->cancelled_at,
+                    'cancellation_details' => $item->cancelled_at ? $item->cancelled_by_name.' — '.$item->cancelled_at->format('Y-m-d H:i:s').' — '.$item->cancellation_reason : null,
                     'recorded_by' => $item->recorded_by_label,
                     'recorded_at' => $item->recorded_at_display,
                     'name' => $item->productIn->name ?? 'عنصر محذوف',
