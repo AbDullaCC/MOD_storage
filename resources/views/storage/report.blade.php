@@ -30,6 +30,8 @@
 
 <body class="bg-gray-100 p-10">
 
+    @include('partials.account-nav')
+
     <div class="max-w-6xl mx-auto">
 
         <div class="flex justify-between items-center mb-6">

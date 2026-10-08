@@ -25,6 +25,8 @@
 
 <body class="bg-gray-100 p-4 md:p-10">
 
+    @include('partials.account-nav')
+
     <div class="max-w-[98%] mx-auto">
 
         <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
@@ -179,6 +181,7 @@
             <div class="flex justify-between items-start border-b pb-4 mb-4">
                 <div>
                     <h3 class="text-2xl font-bold text-gray-800" id="modal-title">...</h3>
+                    @can('admin')
                     <div class="flex gap-2 mt-2">
                         <button onclick="openEditItemModal()"
                             class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200 font-bold transition">✏️
@@ -192,6 +195,7 @@
                                 حذف العنصر</button>
                         </form>
                     </div>
+                    @endcan
                 </div>
                 <button onclick="document.getElementById('details-modal').classList.add('hidden')"
                     class="text-gray-400 hover:text-red-500 text-3xl">&times;</button>
@@ -238,7 +242,7 @@
                                 <th class="p-2">الكمية</th>
                                 <th class="p-2">المصدر</th>
                                 <th class="p-2">ملاحظات</th>
-                                <th class="p-2 w-20">تحكم</th>
+                                @can('admin')<th class="p-2 w-20">تحكم</th>@endcan
                             </tr>
                         </thead>
                         <tbody id="modal-additions-body"></tbody>
@@ -258,7 +262,7 @@
                                 <th class="p-2">الكمية</th>
                                 <th class="p-2">الوجهة</th>
                                 <th class="p-2">ملاحظات</th>
-                                <th class="p-2 w-20">تحكم</th>
+                                @can('admin')<th class="p-2 w-20">تحكم</th>@endcan
                             </tr>
                         </thead>
                         <tbody id="modal-history-body"></tbody>
@@ -438,7 +442,10 @@
         const additionsData = @json($products->mapWithKeys(fn($i) => [$i->id => $i->additions]));
         let currentItemData = {};
 
-        function escJs(s) { return (s ?? '').toString().replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' '); }
+        function escHtml(s) {
+            return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[c]));
+        }
+        function escJs(s) { return escHtml((s ?? '').toString().replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/[\r\n]/g, ' ')); }
 
         function formatDates(iso) {
             const d = new Date(iso);
@@ -473,7 +480,9 @@
             document.getElementById('modal-sn').innerText = currentItemData.sn || '-';
 
             // Set Delete Action
+            @can('admin')
             document.getElementById('delete-item-form').action = `${APP_URL}/storage/item/${currentItemData.id}`;
+            @endcan
 
             // Build Additions Table
             const additionsTbody = document.getElementById('modal-additions-body');
@@ -489,8 +498,9 @@
                     <tr class="border-b border-gray-100 hover:bg-white group">
                         <td class="p-2 text-gray-600 dir-ltr text-right">${displayDate}</td>
                         <td class="p-2 font-bold text-green-600">+${add.quantity}</td>
-                        <td class="p-2 text-gray-800">${add.source || '-'}</td>
-                        <td class="p-2 text-gray-500 text-xs">${add.note || '-'}</td>
+                        <td class="p-2 text-gray-800">${escHtml(add.source || '-')}</td>
+                        <td class="p-2 text-gray-500 text-xs">${escHtml(add.note || '-')}</td>
+                        @can('admin')
                         <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onclick="openEditAdditionModal(${add.id}, '${escJs(add.source)}', '${inputDate}', '${escJs(add.note)}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
@@ -502,6 +512,7 @@
                                 <button type="submit" class="text-red-500 hover:bg-red-100 p-1 rounded" title="حذف الإضافة"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                             </form>
                         </td>
+                        @endcan
                     </tr>`;
                     additionsTbody.innerHTML += row;
                 });
@@ -523,8 +534,9 @@
                     <tr class="border-b border-gray-100 hover:bg-white group">
                         <td class="p-2 text-gray-600 dir-ltr text-right">${displayDate}</td>
                         <td class="p-2 font-bold text-red-600">-${out.quantity}</td>
-                        <td class="p-2 text-gray-800">${out.destination || '-'}</td>
-                        <td class="p-2 text-gray-500 text-xs">${out.note || '-'}</td>
+                        <td class="p-2 text-gray-800">${escHtml(out.destination || '-')}</td>
+                        <td class="p-2 text-gray-500 text-xs">${escHtml(out.note || '-')}</td>
+                        @can('admin')
                         <td class="p-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onclick="openEditOutModal(${out.id}, '${escJs(out.destination)}', '${inputDate}', '${escJs(out.note)}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded" title="تعديل">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
@@ -536,6 +548,7 @@
                                 <button type="submit" class="text-red-500 hover:bg-red-100 p-1 rounded" title="إلغاء السحب"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                             </form>
                         </td>
+                        @endcan
                     </tr>`;
                     tbody.innerHTML += row;
                 });
