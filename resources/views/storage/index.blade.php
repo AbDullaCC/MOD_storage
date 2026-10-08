@@ -42,9 +42,9 @@
                     class="ui-button ui-button-success-soft">
                     <x-icon name="download" /> تصدير CSV
                 </a>
-                <a href="{{ route('storage.report') }}"
-                    class="ui-button ui-button-primary">
-                    <x-icon name="chart" /> التقارير
+                <a href="{{ route('storage.create') }}"
+                    class="ui-button ui-button-success">
+                    <x-icon name="plus" /> إضافة صنف جديد
                 </a>
             </div>
         </div>
@@ -63,23 +63,6 @@
         @if($errors->any())
             <div role="alert" class="bg-red-100 text-red-800 p-4 mb-4 rounded"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
-        <div class="ui-panel inventory-create">
-            <div class="panel-heading"><span class="section-icon status-green"><x-icon name="plus" /></span><div><h2>إضافة صنف جديد</h2><p>أدخل بيانات الصنف والكمية المتوفرة عند إضافته.</p></div></div>
-            <form action="{{ route('storage.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                @csrf
-                <label>اسم الصنف <span class="text-blue-600">*</span><input type="text" name="name" placeholder="مثال: جهاز راوتر" required></label>
-                <label>التصنيف <span class="text-blue-600">*</span><input type="text" name="category" placeholder="مثال: تقانة" required></label>
-                <label>الشركة المصنعة<input type="text" name="manufacturer" placeholder="اسم الشركة"></label>
-                <label>الموديل / النوع<input type="text" name="model_type" placeholder="الموديل أو النوع"></label>
-                <label>الكمية <span class="text-blue-600">*</span><input type="number" name="quantity" placeholder="0" required></label>
-                <label>الرقم التسلسلي<input type="text" name="serial_number" placeholder="SN"></label>
-                <label>اسم المستلم<input type="text" name="reciever" placeholder="اختياري"></label>
-                <label>تاريخ العملية <span class="text-blue-600">*</span><input type="datetime-local" name="added_at" value="{{ now()->format('Y-m-d\TH:i') }}" max="{{ now()->format('Y-m-d\TH:i') }}" required></label>
-                <label class="col-span-1 md:col-span-4">ملاحظات<textarea name="description" placeholder="أي تفاصيل إضافية عن الصنف..." rows="1"></textarea></label>
-                <div class="col-span-1 md:col-span-4 form-footer"><span class="form-hint"><x-icon name="shield" />تُسجّل العملية باسم حسابك الحالي.</span><button type="submit" class="ui-button ui-button-success"><x-icon name="plus" />إضافة للمخزون</button></div>
-            </form>
-        </div>
-
         <div class="inventory-toolbar">
             <h2>الأصناف <span id="inventory-count" class="count-badge">{{ $products->total() }} صنف</span></h2>
             <div class="search-field"><x-icon name="search" /><input type="search" id="search-input" aria-label="بحث في المخزون" value="{{ request('search') }}" placeholder="ابحث بالاسم، التصنيف أو الرقم التسلسلي..."></div>

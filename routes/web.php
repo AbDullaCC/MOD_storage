@@ -29,6 +29,7 @@ Route::middleware(['auth', 'active', 'auth.session'])->group(function () {
     Route::put('/account/password', [AuthController::class, 'updatePassword'])->middleware('throttle:6,1')->name('password.update');
 
     Route::get('/storage', [StorageController::class, 'index'])->name('storage.index');
+    Route::get('/storage/create', [StorageController::class, 'create'])->name('storage.create');
     Route::get('/storage/export', [StorageController::class, 'export'])->name('storage.export');
     Route::post('/storage', [StorageController::class, 'store'])->name('storage.store'); // Add Item
     Route::post('/storage/out', [StorageController::class, 'storeOut'])->name('storage.out'); // Remove Item

@@ -2,6 +2,8 @@
 
 All inventory pages and actions require an active account. There is no public registration route.
 
+The inventory list is at `/storage`. Use **إضافة صنف جديد** to open the separate entry form at `/storage/create`. Both operators and admins can create items. Saving returns to the inventory list; validation errors return to the form with the entered values preserved. Adding stock to an existing item and withdrawing stock remain available directly from the inventory list.
+
 | Permission | Operator | Admin |
 | --- | --- | --- |
 | View inventory, reports, and CSV exports | Yes | Yes |

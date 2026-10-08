@@ -103,6 +103,11 @@ class StorageController extends Controller
         ]);
     }
 
+    public function create()
+    {
+        return view('storage.create');
+    }
+
     // Add a new item to storage
     public function store(Request $request)
     {
@@ -125,7 +130,7 @@ class StorageController extends Controller
 
         $this->inventory->createItem($validated, $request->user());
 
-        return back()->with('success', 'تمت إضافة العنصر بنجاح!');
+        return redirect()->route('storage.index')->with('success', 'تم إنشاء الصنف بنجاح!');
     }
 
     // 2. REMOVE ITEM

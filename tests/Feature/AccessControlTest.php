@@ -29,7 +29,7 @@ class AccessControlTest extends TestCase
     public function test_every_inventory_and_account_route_requires_login(): void
     {
         foreach ([
-            ['GET', '/storage'], ['GET', '/storage/report'], ['GET', '/storage/export'],
+            ['GET', '/storage'], ['GET', '/storage/create'], ['GET', '/storage/report'], ['GET', '/storage/export'],
             ['POST', '/storage'], ['POST', '/storage/out'], ['POST', '/storage/addition'],
             ['PUT', '/storage/item/1'], ['DELETE', '/storage/item/1'],
             ['PUT', '/storage/out/1'], ['DELETE', '/storage/out/1'],
@@ -83,15 +83,20 @@ class AccessControlTest extends TestCase
     public function test_operator_can_read_inventory_and_perform_stock_entries(): void
     {
         $this->actingAs($this->account());
+        $this->get('/storage/create')->assertOk()->assertViewIs('storage.create');
+        $this->from('/storage/create')->post('/storage', ['name' => 'Draft item', 'category' => 'Test', 'quantity' => 0, 'added_at' => now()->subMinute()->toDateTimeString()])
+            ->assertRedirect('/storage/create')->assertSessionHasErrors('quantity')->assertSessionHasInput('name', 'Draft item');
+        $this->assertDatabaseCount('product_ins', 0);
+        $this->get('/storage/create')->assertOk()->assertSee('value="Draft item"', false);
         $this->post('/storage', ['name' => 'Test Item', 'category' => 'Test', 'quantity' => 10, 'added_at' => now()->subMinute()->toDateTimeString()])
-            ->assertSessionHasNoErrors()->assertRedirect();
+            ->assertSessionHasNoErrors()->assertRedirect('/storage');
         $item = ProductIn::firstOrFail();
         $this->post('/storage/addition', ['product_in_id' => $item->id, 'quantity' => 5, 'date' => now()->subMinute()->toDateTimeString()])
             ->assertSessionHasNoErrors()->assertRedirect();
         $this->post('/storage/out', ['product_in_id' => $item->id, 'quantity' => 3, 'date' => now()->subMinute()->toDateTimeString(), 'destination' => 'Office'])
             ->assertSessionHasNoErrors()->assertRedirect();
         $this->assertSame(12, $item->fresh()->current_stock);
-        $this->get('/storage')->assertOk()->assertDontSee('id="delete-item-form"', false)->assertDontSee('إدارة المستخدمين');
+        $this->get('/storage')->assertOk()->assertDontSee('id="delete-item-form"', false)->assertDontSee('id="new-item-form"', false)->assertSee('href="'.route('storage.create').'"', false)->assertDontSee('إدارة المستخدمين');
         $this->get('/storage/report')->assertOk()->assertSee('Test Item');
         $this->get('/storage/export')->assertOk()->assertDownload();
     }
@@ -123,6 +128,7 @@ class AccessControlTest extends TestCase
     public function test_admin_can_create_edit_disable_and_reset_an_account(): void
     {
         $this->actingAs($this->account('admin'));
+        $this->get('/storage/create')->assertOk()->assertViewIs('storage.create');
         $this->get('/users')->assertOk();
         $this->get('/users/create')->assertOk();
         $this->post('/users', $this->accountData(['email' => 'ENTRY@example.test']))->assertRedirect('/users');

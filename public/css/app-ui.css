@@ -70,6 +70,11 @@ body.app-shell { margin: 0; padding: 0; min-height: 100vh; background: #f4f7fb; 
 .section-icon { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: #eef4ff; color: #2563eb; flex-shrink: 0; }
 .inventory-create { padding: 24px; margin-bottom: 26px; border-top: 3px solid var(--green); }
 .inventory-create .panel-heading h2 { color: #12613f; }
+.item-entry-page { max-width: 960px; margin: 0 auto; }
+.entry-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 22px; }
+.entry-full-width { grid-column: 1 / -1; }
+.entry-section { margin-bottom: 24px; }
+.entry-section + .entry-section { border-top: 1px solid #edf1f6; padding-top: 24px; }
 .app-shell :is(input:not([type=checkbox]):not([type=hidden]), textarea, select) { border: 1px solid #dce4ef; border-radius: 8px; background-color: #fff; color: #273f60; min-width: 0; min-height: 42px; padding: 10px 12px; outline: none; transition: border-color .15s, box-shadow .15s; }
 .app-shell :is(input, textarea, select):focus { border-color: #85aafa; box-shadow: 0 0 0 3px #2563eb12; }
 .app-shell input::placeholder, .app-shell textarea::placeholder { color: #94a3b8; font-size: 12px; }
@@ -258,6 +263,9 @@ body.app-shell { margin: 0; padding: 0; min-height: 100vh; background: #f4f7fb; 
     .heading-actions { gap: 7px; }
     .heading-actions .ui-button { padding: 8px 11px; font-size: 11px; }
     .inventory-create { padding: 18px; }
+    .entry-fields { grid-template-columns: 1fr; gap: 16px; }
+    .item-entry-page .form-footer .heading-actions { width: 100%; }
+    .item-entry-page .form-footer .ui-button { flex: 1; }
     .form-footer { align-items: stretch; flex-direction: column; }
     .inventory-toolbar { align-items: stretch; }
     .search-field { width: 100%; }
