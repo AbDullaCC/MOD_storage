@@ -19,14 +19,15 @@ class AuditController extends Controller
     public function index(Request $request)
     {
         $filters = $this->filters($request);
-        $query = $this->query($filters);
+        $query = $this->query($filters, true);
 
         return view('audits.index', [
             'filters' => $filters,
             'selectedProduct' => isset($filters['product_in_id']) ? ProductIn::findOrFail($filters['product_in_id']) : null,
-            'events' => $this->ordered($query)->with('product:id,name,archived_at')->paginate(20)->withQueryString(),
+            'events' => $this->ordered($query)->with('product:id,name,archived_at,cancelled_at')->paginate(20)->withQueryString(),
             'users' => User::orderBy('name')->get(['id', 'name', 'username', 'is_active']),
-            'products' => ProductIn::orderBy('name')->get(['id', 'name', 'archived_at']),
+            'movementProducts' => ProductIn::whereNull('archived_at')->orderBy('name')->get(['id', 'name']),
+            'products' => ProductIn::orderBy('name')->get(['id', 'name', 'archived_at', 'cancelled_at']),
         ]);
     }
 
@@ -42,6 +43,7 @@ class AuditController extends Controller
             'name' => $product->name,
             'category' => $product->category,
             'stock' => $product->current_stock,
+            'initialQuantity' => $product->quantity,
             'manufacturer' => $product->manufacturer,
             'model' => $product->model_type,
             'sn' => $product->serial_number,
@@ -51,6 +53,10 @@ class AuditController extends Controller
             'recordedBy' => $product->recorded_by_label,
             'recordedAt' => $product->recorded_at_display,
             'archived' => $product->archived_at !== null,
+            'cancelled' => $product->cancelled_at !== null,
+            'canCorrect' => $product->can_correct,
+            'canReplace' => $product->can_replace,
+            'cancellationReason' => $product->cancellation_reason,
             'outs' => $product->outs,
             'additions' => $product->additions,
         ])
@@ -116,9 +122,9 @@ class AuditController extends Controller
         ]);
     }
 
-    private function query(array $filters): Builder
+    private function query(array $filters, bool $compactItemCorrections = false): Builder
     {
-        $query = $this->log->query();
+        $query = $this->log->query($compactItemCorrections);
         foreach (['actor_id', 'product_in_id', 'action', 'record_type'] as $field) {
             if (isset($filters[$field])) {
                 $field === 'actor_id' && $filters[$field] === 'unknown'

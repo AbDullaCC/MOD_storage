@@ -26,7 +26,7 @@
         <div class="page-heading">
             <div><div class="eyebrow">مساحة العمل / المخزون</div><h1>إدارة المخزون</h1><p>تابع الأصناف والكميات، وسجّل حركة المخزن بسهولة.</p></div>
             <div class="heading-actions">
-                <a href="{{ route('storage.index', ['include_archived' => request()->boolean('include_archived') ? 0 : 1, 'search' => request('search')]) }}" class="ui-button"><x-icon name="archive" />{{ request()->boolean('include_archived') ? 'إخفاء المؤرشف' : 'عرض المؤرشف أيضاً' }}</a>
+                <a href="{{ route('storage.index', ['include_archived' => request()->boolean('include_archived') ? 0 : 1, 'search' => request('search')]) }}" class="ui-button"><x-icon name="archive" />{{ request()->boolean('include_archived') ? 'إخفاء المؤرشف والملغى' : 'عرض المؤرشف والملغى' }}</a>
                 <label class="ui-button cursor-pointer">
                     <input type="checkbox" id="include-out-of-stock" checked class="accent-green-600">
                     تضمين النافذ
@@ -86,13 +86,17 @@
                                     <button onclick="openDetailsModal(this)"
                                         class="text-blue-500 hover:text-blue-700 bg-blue-50 p-1 rounded-full transition"
                                         title="عرض التفاصيل" data-id="{{ $product->id }}" data-name="{{ $product->name }}"
-                                        data-category="{{ $product->category }}" data-stock="{{ $product->current_stock }}"
+                                        data-initial-quantity="{{ $product->quantity }}" data-category="{{ $product->category }}" data-stock="{{ $product->current_stock }}"
                                         data-manufacturer="{{ $product->manufacturer }}"
                                         data-model="{{ $product->model_type }}" data-receiver="{{ $product->reciever }}"
                                         data-date="{{ $product->added_at->format('Y-m-d\TH:i') }}"
                                         data-recorded-by="{{ $product->recorded_by_label }}"
                                         data-recorded-at="{{ $product->recorded_at_display }}"
                                         data-archived="{{ $product->archived_at ? '1' : '0' }}"
+                                        data-cancelled="{{ $product->cancelled_at ? '1' : '0' }}"
+                                        data-can-correct="{{ $product->can_correct ? '1' : '0' }}"
+                                        data-can-replace="{{ $product->can_replace ? '1' : '0' }}"
+                                        data-cancellation-reason="{{ $product->cancellation_reason }}"
                                         data-outs="{{ $product->outs->toJson() }}" data-additions="{{ $product->additions->toJson() }}"
                                         data-desc="{{ $product->description }}" data-sn="{{ $product->serial_number }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
@@ -104,7 +108,7 @@
                                         </svg>
                                     </button>
                                     <span class="font-bold text-gray-800">{{ $product->name }}</span>
-                                    @if($product->archived_at)<span class="status-badge status-amber">مؤرشف</span>@endif
+                                    @if($product->cancelled_at)<span class="status-badge status-red">ملغى</span>@elseif($product->archived_at)<span class="status-badge status-amber">مؤرشف</span>@endif
                                 </div>
                             </td>
                             <td class="p-4 text-gray-600">{{ $product->category }}</td>

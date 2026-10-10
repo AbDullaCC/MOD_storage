@@ -59,7 +59,7 @@ class InventoryHistoryTest extends TestCase
         foreach (['First correction', 'Second correction'] as $name) {
             $this->put('/storage/item/'.$item->id, [
                 'name' => $name, 'category' => 'Test', 'added_at' => $item->added_at->toDateTimeString(),
-                'reason' => 'Correct label', 'quantity' => 900, 'created_by' => $admin->id, 'archived_at' => now()->toDateTimeString(),
+                'reason' => 'Correct label', 'quantity' => 10, 'created_by' => $admin->id, 'archived_at' => now()->toDateTimeString(),
             ])->assertSessionHasNoErrors();
         }
         $events = InventoryAudit::orderBy('id')->get();

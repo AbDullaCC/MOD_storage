@@ -67,16 +67,19 @@
         }
 
         function openCancelModal(kind, id) {
-            document.getElementById('cancel-form').action = `${APP_URL}/storage/${kind}/${id}`;
-            document.getElementById('cancel-title').textContent = kind === 'item' ? 'أرشفة العنصر' : 'إلغاء العملية';
+            const unusedItem = kind === 'unused-item';
+            const itemAction = kind === 'item' || unusedItem;
+            document.getElementById('cancel-form').action = unusedItem ? `${APP_URL}/storage/item/${id}/cancel` : `${APP_URL}/storage/${kind}/${id}`;
+            document.getElementById('cancel-title').textContent = unusedItem ? 'إلغاء الصنف' : kind === 'item' ? 'أرشفة العنصر' : 'إلغاء العملية';
             document.getElementById('cancel-explanation').textContent = kind === 'item'
                 ? 'يمكن أرشفة الصنف إذا كان رصيده صفراً. ستبقى جميع سجلاته متاحة.'
+                : unusedItem ? 'يُلغى الصنف وتُزال كميته من المخزون مع حفظ بياناته الأصلية. هذا متاح فقط قبل أول إضافة أو سحب.'
                 : kind === 'out' ? 'ستعاد الكمية للمخزون مع الاحتفاظ بالعملية الأصلية وسجل الإلغاء.'
                 : 'ستخصم الكمية من الرصيد إذا كانت متاحة، مع الاحتفاظ بالعملية الأصلية وسجل الإلغاء.';
             document.getElementById('cancel-reason').value = '';
             document.getElementById('cancel-item-name').textContent = currentItemData.name;
-            const movement = kind === 'item' ? null : (kind === 'out' ? currentItemData.outs : currentItemData.additions).find(m => m.id === id);
-            document.getElementById('cancel-operation').textContent = movement ? `${kind === 'out' ? 'سحب' : 'إضافة'} #${id} · ${movement.quantity} وحدة` : 'أرشفة الصنف';
+            const movement = itemAction ? null : (kind === 'out' ? currentItemData.outs : currentItemData.additions).find(m => m.id === id);
+            document.getElementById('cancel-operation').textContent = movement ? `${kind === 'out' ? 'سحب' : 'إضافة'} · ${movement.quantity} وحدة` : unusedItem ? `${currentItemData.stock} وحدة` : 'أرشفة الصنف';
             document.getElementById('cancel-submit').textContent = kind === 'item' ? 'تأكيد الأرشفة' : 'تأكيد الإلغاء';
             openModal('cancel-modal');
             document.getElementById('cancel-reason').focus();
@@ -88,18 +91,16 @@
                 const cancelled = !!m.cancelled_at;
                 const cancellation = cancelled ? `<span class="status-badge status-red mt-2">ملغاة — لا تؤثر على الرصيد الحالي</span><span class="cancellation-copy">${escHtml(m.cancelled_by_name)} · ${escHtml(formatDates(m.cancelled_at).displayDate)} · ${escHtml(m.cancellation_reason)}</span>` : '';
                 let controls = '';
-                @can('admin')
-                if (!cancelled && !currentItemData.archived) {
-                    controls = `<div class="movement-actions"><button type="button" onclick="${kind === 'out' ? 'openEditOutModal' : 'openEditAdditionModal'}(${m.id})" class="ui-button ui-button-warning-soft ui-button-small"><x-icon name="edit" />تعديل</button><button type="button" onclick="openCancelModal('${kind}', ${m.id})" class="ui-button ui-button-danger-soft ui-button-small"><x-icon name="cancel" />إلغاء العملية</button></div>`;
+                if (m.can_correct && !cancelled && !currentItemData.archived && !currentItemData.cancelled) {
+                    controls = `<div class="movement-actions"><button type="button" onclick="${kind === 'out' ? 'openEditOutModal' : 'openEditAdditionModal'}(${m.id})" class="ui-button ui-button-warning-soft ui-button-small"><x-icon name="edit" />تعديل العملية</button><button type="button" onclick="openCancelModal('${kind}', ${m.id})" class="ui-button ui-button-danger-soft ui-button-small"><x-icon name="cancel" />إلغاء العملية</button></div>`;
                 }
-                @endcan
                 return `<tr class="border-b ${cancelled ? 'cancelled-row' : ''}">
                     <td class="p-2 text-gray-600">${escHtml(formatDates(m.date).displayDate)}</td>
                     <td class="p-2 font-bold ${cancelled ? 'line-through text-gray-500' : kind === 'out' ? 'text-red-600' : 'text-green-600'}">${kind === 'out' ? '-' : '+'}${m.quantity}</td>
                     <td class="p-2">${escHtml((kind === 'out' ? m.destination : m.source) || '-')}</td>
                     <td class="p-2 text-xs text-gray-600">${escHtml(m.note || '-')}${cancellation}</td>
                     <td class="p-2 text-xs"><span class="block font-bold">${escHtml(m.recorded_by_label)}</span><span class="block whitespace-nowrap text-gray-500" dir="ltr">${escHtml(m.recorded_at_display)}</span></td>
-                    @can('admin')<td class="p-2">${controls}</td>@endcan
+                    <td class="p-2">${controls}</td>
                 </tr>`;
             }).join('');
         }
@@ -111,6 +112,7 @@
                 name: btn.getAttribute('data-name'),
                 category: btn.getAttribute('data-category'),
                 stock: btn.getAttribute('data-stock'),
+                initialQuantity: btn.getAttribute('data-initial-quantity'),
                 manufacturer: btn.getAttribute('data-manufacturer'),
                 model: btn.getAttribute('data-model'),
                 sn: btn.getAttribute('data-sn'),
@@ -120,6 +122,10 @@
                 recordedBy: btn.getAttribute('data-recorded-by'),
                 recordedAt: btn.getAttribute('data-recorded-at'),
                 archived: btn.getAttribute('data-archived') === '1',
+                cancelled: btn.getAttribute('data-cancelled') === '1',
+                canCorrect: btn.getAttribute('data-can-correct') === '1',
+                canReplace: btn.getAttribute('data-can-replace') === '1',
+                cancellationReason: btn.getAttribute('data-cancellation-reason'),
                 outs: JSON.parse(btn.getAttribute('data-outs') || '[]'),
                 additions: JSON.parse(btn.getAttribute('data-additions') || '[]'),
             });
@@ -141,12 +147,16 @@
             document.getElementById('modal-sn').innerText = currentItemData.sn || 'غير محدد';
             document.getElementById('modal-recorded-by').innerText = currentItemData.recordedBy;
             document.getElementById('modal-recorded-at').innerText = currentItemData.recordedAt;
+            document.getElementById('edit-item-button').classList.toggle('hidden', !currentItemData.canCorrect || currentItemData.archived || currentItemData.cancelled);
+            document.getElementById('cancel-item-button').classList.toggle('hidden', !currentItemData.canReplace);
+            const cancellationNote = document.getElementById('item-cancellation-note');
+            cancellationNote.classList.toggle('hidden', !currentItemData.cancelled);
+            cancellationNote.textContent = currentItemData.cancelled ? `صنف ملغى — ${currentItemData.cancellationReason || ''}` : '';
 
             // Set Delete Action
             @can('admin')
             document.getElementById('delete-item-form').action = `${APP_URL}/storage/item/${currentItemData.id}`;
             document.getElementById('delete-item-form').classList.toggle('hidden', currentItemData.archived);
-            document.getElementById('edit-item-button').classList.toggle('hidden', currentItemData.archived);
             document.getElementById('item-history-link').href = `${APP_URL}/audits?product_in_id=${currentItemData.id}`;
             @endcan
 
@@ -165,36 +175,31 @@
             document.getElementById('edit-receiver').value = currentItemData.receiver;
             document.getElementById('edit-date').value = currentItemData.date; // Ensure this is also formatted similarly if needed
             document.getElementById('edit-desc').value = currentItemData.desc;
+            document.getElementById('edit-item-quantity').value = currentItemData.initialQuantity;
+            document.getElementById('edit-item-quantity').disabled = !currentItemData.canReplace;
+            document.getElementById('edit-item-quantity-hint').textContent = currentItemData.canReplace
+                ? 'يمكن تصحيح الكمية قبل تسجيل أي إضافة أو سحب.'
+                : 'لا يمكن تعديل الكمية بعد تسجيل إضافة أو سحب، حتى لو أُلغيت الحركة.';
             document.querySelector('#edit-item-form [name="reason"]').value = '';
             openModal('edit-item-modal');
         }
 
-        function openEditOutModal(id) {
-            const record = currentItemData.outs.find(m => m.id === id);
-            const dest = record.destination, note = record.note, date = formatDates(record.date).inputDate;
-            document.getElementById('edit-out-form').action = `${APP_URL}/storage/out/${id}`;
-            document.getElementById('edit-out-destination').value = dest !== 'null' ? dest : '';
-            // FIX: The 'date' passed here is now the clean 'inputDate' string
-            document.getElementById('edit-out-date').value = date;
-            document.getElementById('edit-out-note').value = note !== 'null' ? note : '';
-            document.getElementById('edit-out-reason').value = '';
-            document.getElementById('edit-out-item-name').textContent = currentItemData.name;
-            document.getElementById('edit-out-quantity').textContent = `سحب #${id} · ${record.quantity} وحدة`;
-            openModal('edit-out-modal');
+        function openEditMovementModal(kind, id) {
+            const record = (kind === 'out' ? currentItemData.outs : currentItemData.additions).find(m => m.id === id);
+            const field = kind === 'out' ? 'destination' : 'source';
+            document.getElementById(`edit-${kind}-form`).action = `${APP_URL}/storage/${kind}/${id}`;
+            document.getElementById(`edit-${kind}-product`).value = currentItemData.id;
+            document.getElementById(`edit-${kind}-${field}`).value = record[field] || '';
+            document.getElementById(`edit-${kind}-date`).value = formatDates(record.date).inputDate;
+            document.getElementById(`edit-${kind}-note`).value = record.note || '';
+            document.getElementById(`edit-${kind}-reason`).value = '';
+            document.getElementById(`edit-${kind}-item-name`).textContent = currentItemData.name;
+            document.getElementById(`edit-${kind}-original-quantity`).textContent = `${kind === 'out' ? 'سحب' : 'إضافة'} · ${record.quantity} وحدة`;
+            openModal(`edit-${kind}-modal`);
         }
 
-        function openEditAdditionModal(id) {
-            const record = currentItemData.additions.find(m => m.id === id);
-            const source = record.source, note = record.note, date = formatDates(record.date).inputDate;
-            document.getElementById('edit-addition-form').action = `${APP_URL}/storage/addition/${id}`;
-            document.getElementById('edit-addition-source').value = source !== 'null' ? source : '';
-            document.getElementById('edit-addition-date').value = date;
-            document.getElementById('edit-addition-note').value = note !== 'null' ? note : '';
-            document.getElementById('edit-addition-reason').value = '';
-            document.getElementById('edit-addition-item-name').textContent = currentItemData.name;
-            document.getElementById('edit-addition-quantity').textContent = `إضافة #${id} · ${record.quantity} وحدة`;
-            openModal('edit-addition-modal');
-        }
+        function openEditOutModal(id) { openEditMovementModal('out', id); }
+        function openEditAdditionModal(id) { openEditMovementModal('addition', id); }
 
         function openAddModal(id, name) {
             document.getElementById('add-id').value = id;

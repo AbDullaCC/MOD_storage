@@ -116,7 +116,7 @@ class AccessControlTest extends TestCase
         $this->get('/storage/export')->assertOk()->assertDownload();
     }
 
-    public function test_operator_cannot_edit_delete_or_manage_accounts_even_with_direct_requests(): void
+    public function test_operator_cannot_correct_unowned_records_or_manage_accounts_even_with_direct_requests(): void
     {
         $user = $this->account();
         $item = ProductIn::create(['name' => 'Protected', 'category' => 'Test', 'quantity' => 10, 'added_at' => now()]);

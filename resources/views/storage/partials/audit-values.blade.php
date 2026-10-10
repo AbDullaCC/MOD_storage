@@ -12,8 +12,13 @@
     $reason = $event->reason ?: ($event->is_legacy ? ($values['cancellation_reason'] ?? null) : null);
 @endphp
 <div class="audit-values audit-values-embedded">
+    @if(isset($values['replacement_id']))
+        <p class="audit-reason"><strong>التصحيح</strong><span>أُلغيت هذه البيانات وسُجّل بديل مصحح.</span>
+            <a class="ui-button ui-button-small" href="{{ route('audits.itemCard', $values['replacement_product_id']) }}" data-item-card aria-haspopup="dialog">{{ $values['replacement_product_name'] }}</a>
+        </p>
+    @endif
     <section class="audit-detail-section" aria-label="بيانات العملية">
-        <div class="audit-record-heading"><h4>بيانات العملية</h4>@if($event->is_legacy)<p>سجل سابق · هذه البيانات الحالية للعملية، ولا يوجد رصيد تاريخي محفوظ.</p>@endif</div>
+        <div class="audit-record-heading"><h4>{{ match ($event->record_type) { 'out' => 'بيانات عملية السحب', 'addition' => 'بيانات عملية الإضافة', default => 'بيانات الصنف' } }}</h4>@if($event->is_legacy)<p>سجل سابق · هذه البيانات الحالية للعملية، ولا يوجد رصيد تاريخي محفوظ.</p>@endif</div>
         <dl class="audit-record-fields info-grid">
             @foreach($fields as $field)
                 <div class="info-field info-field-{{ $field }} @if(in_array($field, ['note', 'description'])) audit-field-wide @endif"><dt>{{ $labels[$field] }}</dt><dd class="whitespace-pre-wrap" dir="auto">{{ $displayValue($field, $values[$field] ?? null) }}</dd></div>

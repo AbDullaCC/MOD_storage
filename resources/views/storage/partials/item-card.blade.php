@@ -7,12 +7,15 @@
             <div class="dialog-header">
                 <div>
                     <div class="dialog-heading"><span class="section-icon"><x-icon name="box" /></span><div><h3 id="modal-title">...</h3><p>تفاصيل الصنف وحركات المخزون</p></div></div>
-                    @can('admin')
                     <div class="details-actions">
+                        @can('admin')
                         <a id="item-history-link" class="ui-button ui-button-soft ui-button-small"><x-icon name="history" />سجل العمليات</a>
+                        @endcan
                         <button id="edit-item-button" onclick="openEditItemModal()"
                             class="ui-button ui-button-warning-soft ui-button-small"><x-icon name="edit" />
-                            تعديل البيانات</button>
+                            تعديل بيانات الصنف</button>
+                        <button id="cancel-item-button" type="button" onclick="openCancelModal('unused-item', currentItemData.id)" class="ui-button ui-button-danger-soft ui-button-small"><x-icon name="cancel" />إلغاء الصنف</button>
+                        @can('admin')
                         <form id="delete-item-form" method="POST"
                             onsubmit="openCancelModal('item', currentItemData.id); return false;"
                             class="inline">
@@ -21,8 +24,9 @@
                                 class="ui-button ui-button-danger-soft ui-button-small"><x-icon name="archive" />
                                 أرشفة العنصر</button>
                         </form>
+                        @endcan
                     </div>
-                    @endcan
+                    <p id="item-cancellation-note" class="cancel-notice hidden mt-4"></p>
                 </div>
                 <button type="button" onclick="closeModal('details-modal')" aria-label="إغلاق التفاصيل" class="icon-button"><x-icon name="close" /></button>
             </div>
@@ -40,7 +44,7 @@
                                 <th class="p-2">المصدر</th>
                                 <th class="p-2">ملاحظات</th>
                                 <th class="p-2">سجّلها / وقت التسجيل</th>
-                                @can('admin')<th>الإجراءات</th>@endcan
+                                <th>الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody id="modal-additions-body"></tbody>
@@ -61,7 +65,7 @@
                                 <th class="p-2">الوجهة</th>
                                 <th class="p-2">ملاحظات</th>
                                 <th class="p-2">سجّلها / وقت التسجيل</th>
-                                @can('admin')<th>الإجراءات</th>@endcan
+                                <th>الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody id="modal-history-body"></tbody>
@@ -72,4 +76,3 @@
             </div>
         </div>
     </div>
-

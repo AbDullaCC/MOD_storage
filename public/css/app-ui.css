@@ -79,8 +79,10 @@ body.app-shell { margin: 0; padding: 0; min-height: 100vh; background: #f4f7fb; 
 .app-shell :is(input, textarea, select):focus { border-color: #85aafa; box-shadow: 0 0 0 3px #2563eb12; }
 .app-shell input::placeholder, .app-shell textarea::placeholder { color: #94a3b8; font-size: 12px; }
 .app-shell textarea { resize: vertical; }
+.app-shell input:not([type=checkbox]):not([type=hidden]):disabled { background-color: #e9edf2; color: #7b8798; border-color: #d4dbe4; cursor: not-allowed; }
 .inventory-create label, .dialog-form label { display: block; font-size: 12px; font-weight: 600; color: #53657e; }
 .inventory-create label > :is(input, textarea), .dialog-form label > :is(input, textarea) { display: block; width: 100%; margin-top: 6px; }
+.inventory-create label > select, .dialog-form label > select { display: block; width: 100%; margin-top: 6px; }
 .form-footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 16px; border-top: 1px solid #edf1f6; }
 .form-hint { font-size: 11px; color: #8493a9; display: inline-flex; align-items: center; gap: 6px; }
 .inventory-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }

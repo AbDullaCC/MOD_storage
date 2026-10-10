@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\DB;
 
 class OperationLog
 {
-    public function query(): Builder
+    public function query(bool $compactItemCorrections = false): Builder
     {
         $entries = DB::table('inventory_audits')->select('inventory_audits.*')->selectRaw('0 AS is_legacy');
         foreach (['item' => 'product_ins', 'addition' => 'additions', 'out' => 'outs'] as $type => $table) {
             $fields = $type === 'item'
-                ? ['id', 'name', 'category', 'manufacturer', 'model_type', 'quantity', 'serial_number', 'reciever', 'description', 'added_at', 'created_by', 'created_by_name', 'archived_at', 'created_at', 'updated_at']
+                ? ['id', 'name', 'category', 'manufacturer', 'model_type', 'quantity', 'serial_number', 'reciever', 'description', 'added_at', 'created_by', 'created_by_name', 'archived_at', 'cancelled_at', 'cancellation_reason', 'created_at', 'updated_at']
                 : ['id', 'product_in_id', 'quantity', 'date', $type === 'out' ? 'destination' : 'source', 'note', 'created_by', 'created_by_name', 'cancelled_at', 'cancelled_by', 'cancelled_by_name', 'cancellation_reason', 'created_at', 'updated_at'];
             $json = implode(', ', array_map(static function ($field) use ($table) {
                 $value = $table.'.'.$field;
@@ -35,6 +35,25 @@ class OperationLog
         }
 
         // Legacy rows are a read-only view of existing operations, never invented audit entries.
-        return InventoryAudit::query()->fromSub($entries, 'inventory_audits');
+        $query = InventoryAudit::query()->fromSub($entries, 'inventory_audits');
+        if ($compactItemCorrections) {
+            $query->where(function ($query) {
+                $query->where('record_type', '!=', 'item')->orWhere('action', '!=', 'cancelled')
+                    ->orWhereNull('after_values->replacement_id');
+            });
+            // Hide superseded creations, including legacy rows, without changing stored history.
+            $query->where(function ($query) {
+                $query->where('record_type', '!=', 'item')->orWhere('action', '!=', 'created')
+                    ->orWhereNotExists(function ($replacement) {
+                        $replacement->selectRaw('1')->from('inventory_audits as item_replacements')
+                            ->where('item_replacements.record_type', 'item')
+                            ->where('item_replacements.action', 'cancelled')
+                            ->whereColumn('item_replacements.record_id', 'inventory_audits.record_id')
+                            ->whereNotNull('item_replacements.after_values->replacement_id');
+                    });
+            });
+        }
+
+        return $query;
     }
 }

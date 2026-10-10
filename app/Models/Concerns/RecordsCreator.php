@@ -4,6 +4,7 @@ namespace App\Models\Concerns;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Gate;
 
 trait RecordsCreator
 {
@@ -28,6 +29,11 @@ trait RecordsCreator
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function getCanCorrectAttribute(): bool
+    {
+        return Gate::allows('correct-inventory', $this);
     }
 
     public function getRecordedByLabelAttribute(): string

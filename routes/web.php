@@ -35,6 +35,13 @@ Route::middleware(['auth', 'active', 'auth.session'])->group(function () {
     Route::post('/storage/out', [StorageController::class, 'storeOut'])->name('storage.out'); // Remove Item
     Route::post('/storage/addition', [StorageController::class, 'storeAddition'])->name('storage.addition'); // Add batch to existing item
 
+    Route::put('/storage/item/{id}', [StorageController::class, 'updateItem'])->whereNumber('id')->name('storage.updateItem');
+    Route::delete('/storage/item/{id}/cancel', [StorageController::class, 'cancelUnusedItem'])->whereNumber('id')->name('storage.cancelItem');
+    Route::put('/storage/out/{id}', [StorageController::class, 'updateOut'])->whereNumber('id')->name('storage.updateOut');
+    Route::delete('/storage/out/{id}', [StorageController::class, 'destroyOut'])->whereNumber('id')->name('storage.destroyOut');
+    Route::put('/storage/addition/{id}', [StorageController::class, 'updateAddition'])->whereNumber('id')->name('storage.updateAddition');
+    Route::delete('/storage/addition/{id}', [StorageController::class, 'destroyAddition'])->whereNumber('id')->name('storage.destroyAddition');
+
     // Edit/Delete ITEMS
     Route::middleware('can:admin')->group(function () {
         Route::get('/audits', [AuditController::class, 'index'])->name('audits.index');
@@ -45,15 +52,7 @@ Route::middleware(['auth', 'active', 'auth.session'])->group(function () {
         Route::resource('users', UserController::class)->except(['show', 'destroy']);
         Route::get('/storage/item/{id}/history', [AuditController::class, 'item'])->whereNumber('id')->name('storage.history');
         Route::post('/storage/item/{id}/restore', [StorageController::class, 'restoreItem'])->name('storage.restoreItem');
-        Route::put('/storage/item/{id}', [StorageController::class, 'updateItem'])->name('storage.updateItem');
         Route::delete('/storage/item/{id}', [StorageController::class, 'destroyItem'])->name('storage.destroyItem');
 
-        // Edit/Delete REMOVALS (Outs)
-        Route::put('/storage/out/{id}', [StorageController::class, 'updateOut'])->name('storage.updateOut');
-        Route::delete('/storage/out/{id}', [StorageController::class, 'destroyOut'])->name('storage.destroyOut');
-
-        // Edit/Delete ADDITIONS (Restocks)
-        Route::put('/storage/addition/{id}', [StorageController::class, 'updateAddition'])->name('storage.updateAddition');
-        Route::delete('/storage/addition/{id}', [StorageController::class, 'destroyAddition'])->name('storage.destroyAddition');
     });
 });

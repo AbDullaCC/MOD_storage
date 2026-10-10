@@ -52,11 +52,24 @@ try {
     $emit(['phase' => 'ready', 'connection_id' => $connectionId]);
     $command('start');
     try {
-        $out = app(InventoryService::class)->createMovement(Out::class, [
+        $data = [
             'product_in_id' => $input['product_id'], 'quantity' => $input['quantity'],
             'date' => now(), 'destination' => $input['destination'],
-        ], $actor);
-        $emit(['phase' => 'result', 'status' => 'accepted', 'record_id' => $out->id]);
+        ];
+        $service = app(InventoryService::class);
+        $record = match ($input['operation'] ?? 'withdraw') {
+            'replace_item' => $service->updateItem($input['product_id'], [
+                'name' => 'Corrected concurrent item', 'category' => 'Test', 'quantity' => $input['quantity'], 'added_at' => now(),
+            ], 'Wrong initial quantity', $actor),
+            'replace_out' => $service->updateMovement(Out::class, $input['movement_id'], $data, 'Wrong withdrawn quantity', $actor),
+            'cancel_out' => (function () use ($service, $input, $actor) {
+                $service->cancel(Out::class, $input['movement_id'], 'Incorrect withdrawal', $actor);
+
+                return Out::findOrFail($input['movement_id']);
+            })(),
+            default => $service->createMovement(Out::class, $data, $actor),
+        };
+        $emit(['phase' => 'result', 'status' => 'accepted', 'record_id' => $record->id]);
     } catch (ValidationException $exception) {
         $emit(['phase' => 'result', 'status' => 'rejected', 'errors' => $exception->errors()]);
     }

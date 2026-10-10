@@ -23,5 +23,6 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('admin', fn (User $user) => $user->isAdmin());
+        Gate::define('correct-inventory', fn (User $user, $record) => $user->is_active && ($user->isAdmin() || ($record->created_by !== null && (int) $record->created_by === (int) $user->id)));
     }
 }

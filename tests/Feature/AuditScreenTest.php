@@ -131,7 +131,7 @@ class AuditScreenTest extends TestCase
             ['إنشاء صنف جديد', 'green', 0, 10],
             ['إضافة كمية', 'green', 10, 15],
             ['سحب كمية', 'red', 15, 13],
-            ['تعديل الوجهة', 'amber', 13, 13],
+            ['تعديل الوجهة لعملية سحب', 'amber', 13, 13],
             ['إلغاء سحب · إعادة للمخزون', 'green', 13, 15],
             ['إلغاء إضافة · خصم من المخزون', 'red', 15, 10],
         ];
@@ -158,6 +158,67 @@ class AuditScreenTest extends TestCase
             }
             $this->assertSame('false', $xpath->evaluate('string('.$row.'/td[6]/button/@aria-expanded)'));
             $this->assertSame(1, $xpath->query($group.'/tr[2][@hidden]')->length);
+        }
+    }
+
+    public function test_item_replacement_shows_one_normal_creation_row_and_preserves_full_stored_history(): void
+    {
+        $admin = $this->admin();
+        $service = app(InventoryService::class);
+        $item = $service->createItem(['name' => 'Original item', 'category' => 'Test', 'quantity' => 10, 'added_at' => now()], $admin);
+        $replacement = $service->updateItem($item->id, ['name' => 'New item', 'quantity' => 8], 'Wrong initial quantity', $admin);
+        $events = InventoryAudit::orderBy('id')->get();
+        $this->assertCount(3, $events);
+        $response = $this->get('/audits')->assertOk()->assertDontSee('إعادة إدخال صنف مصحح')
+            ->assertDontSee('هذا السجل بديل مصحح لسجل سابق.');
+        $this->assertSame([$events[2]->id], $response->viewData('events')->pluck('id')->all());
+        $this->assertSame(1, $response->viewData('events')->total());
+        $this->assertSame('إنشاء صنف جديد', $response->viewData('events')->first()->operationTitle());
+        $this->get('/audits?product_in_id='.$replacement->id)->assertOk()->assertViewHas('events', fn ($events) => $events->total() === 1);
+        $this->get('/audits?product_in_id='.$item->id)->assertOk()->assertViewHas('events', fn ($events) => $events->total() === 0);
+        $csv = $this->get('/audits/export')->assertOk()->streamedContent();
+        $this->assertStringContainsString('replacement_id', $csv);
+        $this->assertStringContainsString('replaces_id', $csv);
+        $this->assertStringContainsString('Original item', $csv);
+        $this->assertDatabaseCount('inventory_audits', 3);
+        $ordinary = $service->createItem(['name' => 'Cancelled without replacement', 'category' => 'Test', 'quantity' => 2, 'added_at' => now()], $admin);
+        $service->cancelItem($ordinary->id, 'Incorrect item', $admin);
+        $this->get('/audits?product_in_id='.$ordinary->id)->assertOk()->assertViewHas('events', fn ($events) => $events->total() === 2);
+    }
+
+    public function test_repeated_quantity_corrections_hide_superseded_legacy_and_saved_creations(): void
+    {
+        $admin = $this->admin();
+        $service = app(InventoryService::class);
+        $original = $this->item();
+        $first = $service->updateItem($original->id, ['quantity' => 8], 'First quantity correction', $admin);
+        $latest = $service->updateItem($first->id, ['quantity' => 6], 'Second quantity correction', $admin);
+
+        $response = $this->get('/audits?record_type=item&action=created')->assertOk();
+        $this->assertSame(1, $response->viewData('events')->total());
+        $this->assertSame($latest->id, $response->viewData('events')->first()->record_id);
+        $this->assertFalse((bool) $response->viewData('events')->first()->is_legacy);
+        foreach ([$original, $first] as $superseded) {
+            $this->get('/audits?product_in_id='.$superseded->id)->assertOk()
+                ->assertViewHas('events', fn ($events) => $events->total() === 0);
+        }
+
+        $this->assertDatabaseCount('inventory_audits', 4);
+        $this->assertCount(6, $this->csv('/audits/export?record_type=item'));
+    }
+
+    public function test_movement_edits_identify_the_operation_and_the_edited_field(): void
+    {
+        $admin = $this->admin();
+        $service = app(InventoryService::class);
+        $item = $service->createItem(['name' => 'Shared item', 'category' => 'Test', 'quantity' => 10, 'added_at' => now()], $admin);
+        foreach ([Out::class => ['destination', 'تعديل الوجهة لعملية سحب', 'بيانات عملية السحب'], Addition::class => ['source', 'تعديل المصدر لعملية إضافة', 'بيانات عملية الإضافة']] as $class => [$field, $title, $heading]) {
+            $movement = $service->createMovement($class, ['product_in_id' => $item->id, 'quantity' => 2, 'date' => now(), $field => 'Old office'], $admin);
+            $service->updateMovement($class, $movement->id, [$field => 'New office'], 'Correct operation details', $admin);
+            $audit = InventoryAudit::latest('id')->firstOrFail();
+            $this->assertSame($title, $audit->operationTitle());
+            $this->assertSame($audit->stock_before, $audit->stock_after);
+            $this->get('/audits')->assertOk()->assertSee($title)->assertSee($heading)->assertSee('Old office')->assertSee('New office');
         }
     }
 

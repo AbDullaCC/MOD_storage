@@ -8,11 +8,11 @@
     </div>
     @if($selectedProduct)
         <section class="ui-panel item-summary" aria-label="ملخص الصنف">
-            <div class="summary-product"><span class="section-icon"><x-icon name="box" /></span><div><h2>{{ $selectedProduct->name }}</h2><p>{{ $selectedProduct->category }} · <span class="status-badge {{ $selectedProduct->archived_at ? 'status-amber' : 'status-green' }}">{{ $selectedProduct->archived_at ? 'مؤرشف' : 'نشط' }}</span></p></div></div>
+            <div class="summary-product"><span class="section-icon"><x-icon name="box" /></span><div><h2>{{ $selectedProduct->name }}</h2><p>{{ $selectedProduct->category }} · <span class="status-badge {{ $selectedProduct->cancelled_at ? 'status-red' : ($selectedProduct->archived_at ? 'status-amber' : 'status-green') }}">{{ $selectedProduct->cancelled_at ? 'ملغى' : ($selectedProduct->archived_at ? 'مؤرشف' : 'نشط') }}</span></p></div></div>
             <div class="summary-stat"><span>الرصيد الحالي</span><strong>{{ $selectedProduct->current_stock }}</strong><small>وحدة</small></div>
             <a class="ui-button" href="{{ route('audits.index', collect($filters)->except('product_in_id')->all()) }}">عرض كل الأصناف</a>
         </section>
-        @if($selectedProduct->archived_at)
+        @if($selectedProduct->archived_at && ! $selectedProduct->cancelled_at)
             <section class="ui-panel restore-panel">
                 <div class="panel-heading"><span class="section-icon status-amber"><x-icon name="archive" /></span><div><h2>هذا الصنف مؤرشف</h2><p>أعد تفعيله لإجراء عمليات جديدة عليه. يبقى سجله السابق محفوظاً.</p></div></div>
                 <form method="POST" action="{{ route('storage.restoreItem', $selectedProduct->id) }}">@csrf
@@ -27,7 +27,7 @@
         <form method="GET" action="{{ route('audits.index') }}">
             <div class="audit-filters">
                 <label for="audit-user">المستخدم<select id="audit-user" name="actor_id"><option value="">كل المستخدمين</option><option value="unknown" @selected(($filters['actor_id'] ?? '') === 'unknown')>المستخدم غير معروف</option>@foreach($users as $user)<option value="{{ $user->id }}" @selected((string) ($filters['actor_id'] ?? '') === (string) $user->id)>{{ $user->name }} ({{ $user->username }}){{ $user->is_active ? '' : ' — معطّل' }}</option>@endforeach</select></label>
-                <label for="audit-product">الصنف<select id="audit-product" name="product_in_id"><option value="">كل الأصناف</option>@foreach($products as $product)<option value="{{ $product->id }}" @selected((string) ($filters['product_in_id'] ?? '') === (string) $product->id)>{{ $product->name }} — #{{ $product->id }}{{ $product->archived_at ? ' — مؤرشف' : '' }}</option>@endforeach</select></label>
+                <label for="audit-product">الصنف<select id="audit-product" name="product_in_id"><option value="">كل الأصناف</option>@foreach($products as $product)<option value="{{ $product->id }}" @selected((string) ($filters['product_in_id'] ?? '') === (string) $product->id)>{{ $product->name }} — #{{ $product->id }}{{ $product->cancelled_at ? ' — ملغى' : ($product->archived_at ? ' — مؤرشف' : '') }}</option>@endforeach</select></label>
                 <label for="audit-type">نوع العملية<select id="audit-type" name="record_type"><option value="">كل الأنواع</option>@foreach(\App\Models\InventoryAudit::TYPES as $value => $label)<option value="{{ $value }}" @selected(($filters['record_type'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></label>
                 <label for="audit-action">الإجراء<select id="audit-action" name="action"><option value="">كل الإجراءات</option>@foreach(\App\Models\InventoryAudit::ACTIONS as $value => $label)<option value="{{ $value }}" @selected(($filters['action'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></label>
                 <label for="audit-from">من تاريخ التسجيل<input id="audit-from" name="from" type="date" value="{{ ($filters['from'] ?? '') }}"></label>
@@ -64,6 +64,11 @@ document.querySelectorAll('[data-operation-toggle]').forEach(button => {
     button.addEventListener('click', () => {
         const row = document.getElementById(button.getAttribute('aria-controls'));
         const expanded = button.getAttribute('aria-expanded') !== 'true';
+        document.querySelectorAll('[data-operation-toggle][aria-expanded="true"]').forEach(other => {
+            if (other === button) return;
+            other.setAttribute('aria-expanded', 'false');
+            document.getElementById(other.getAttribute('aria-controls')).hidden = true;
+        });
         button.setAttribute('aria-expanded', String(expanded));
         row.hidden = !expanded;
     });

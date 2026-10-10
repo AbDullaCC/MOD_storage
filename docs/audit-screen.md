@@ -25,3 +25,5 @@ The final **مصدر البيانات** column distinguishes saved audit snapsho
 ## Verification
 
 `php artisan test` uses the separate disposable MySQL database. Coverage includes permissions, disabled accounts, filters, date boundaries, pagination, multi-batch exports, archived-item restoration, compatibility redirects, legacy visibility without duplicate creations or invented balances, retained names, escaped HTML, and spreadsheet-safe CSV with preserved snapshots.
+
+Only one operation detail row can be expanded at a time. Movement edit titles identify the addition/withdrawal and the edited field, and retain quantity as context. Replacement item creations use the ordinary creation title; their paired cancellation row, superseded creation rows (including legacy creations), and corrected-version detail block are omitted from the screen. Repeated initial quantity corrections show only the latest creation. Complete stored/CSV history remains intact, and ordinary item cancellations remain visible. Locked item quantity inputs use a grey background and disabled styling. Movement dialogs have no quantity input.

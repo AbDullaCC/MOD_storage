@@ -9,7 +9,7 @@
     <tr class="operation-row">
         <td class="operation-action">
             <div class="operation-headline"><span class="operation-marker" aria-hidden="true"></span><strong>{{ $event->operationTitle() }}</strong>
-                @if(in_array($event->action, ['created', 'cancelled']) && isset($values['quantity']))<span class="operation-quantity"><bdi>{{ $values['quantity'] }}</bdi> وحدة</span>@endif
+                @if((in_array($event->action, ['created', 'cancelled']) || ($event->action === 'edited' && $event->record_type !== 'item')) && isset($values['quantity']))<span class="operation-quantity"><bdi>{{ $values['quantity'] }}</bdi> وحدة</span>@endif
             </div>
             @if($changes)
                 @foreach(array_slice($changes, 0, 2, true) as $field => $change)
@@ -24,7 +24,7 @@
         </td>
         <td class="operation-item">
             <a href="{{ route('audits.itemCard', $event->product_in_id) }}" data-item-card aria-haspopup="dialog" dir="auto">{{ $event->product?->name ?? 'صنف غير متاح' }}</a>
-            @if($event->product?->archived_at)<span class="operation-meta">مؤرشف</span>@endif
+            @if($event->product?->cancelled_at)<span class="operation-meta">ملغى</span>@elseif($event->product?->archived_at)<span class="operation-meta">مؤرشف</span>@endif
         </td>
         <td class="operation-balance" data-label="الرصيد">
             @if($event->is_legacy)<span class="operation-meta">غير متاح تاريخياً</span>

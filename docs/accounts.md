@@ -12,7 +12,9 @@ The inventory list is at `/storage`. Use **إضافة صنف جديد** to open 
 | Review the operations log, filter by item/user/date/action, and export | No | Yes |
 | Export current inventory CSV | No | Yes |
 | Create items, add stock, and withdraw stock | Yes | Yes |
-| Correct records, cancel movements, archive/restore items, view change history | No | Yes |
+| Correct item details and movements, cancel incorrect entries | Own records | Any record |
+| Replace an unused item; change a movement item (same quantity) | Own records | Any record |
+| Archive/restore used items; review all change history | No | Yes |
 | Create accounts, change roles, disable accounts, reset passwords | No | Yes |
 | Change own password and log out | Yes | Yes |
 
@@ -41,7 +43,7 @@ The PHPUnit configuration forces MySQL and the separate `mod_storage_testing` da
 
 ## Scope
 
-Login, roles, operation attribution, and permanent inventory change history are implemented. Admins correct records with a reason, cancel movements instead of deleting them, and archive items only at zero stock. New accounts default to the operator role unless an admin role is explicitly assigned. **سجل العمليات** (`/audits`) is the single review page for movements, edits, cancellations, and item history; see [operations log](audit-screen.md). Old report and item-history URLs redirect to it.
+Login, roles, operation attribution, and permanent inventory change history are implemented. Employees correct their own records with a reason; admins can correct any record. Movements are cancelled rather than deleted. Unused incorrect items may be cancelled or replaced atomically; initial quantity corrections are available in the item edit dialog only before any movement; saving a changed quantity creates a linked replacement. Admins archive used items only at zero stock. See [employee corrections](employee-corrections.md). New accounts default to the operator role unless an admin role is explicitly assigned. **سجل العمليات** (`/audits`) is the single review page for movements, edits, cancellations, and item history; see [operations log](audit-screen.md). Old report and item-history URLs redirect to it.
 
 The application uses MySQL with one creation migration per table. See [database setup](database.md) for the consolidated migration layout and local database setup.
 
@@ -54,3 +56,5 @@ New items, restocks, and withdrawals store `created_by` (the authenticated user'
 Existing records retain their original timestamps and receive no guessed user attribution; they display **سجل سابق / المستخدم غير معروف** (Legacy / user unknown). Records created outside the authenticated workflow, such as seed data, also have unknown attribution. The inventory CSV remains a stock summary; it is not an operation-history export.
 
 Account renames or deactivation do not change the stored name. Foreign keys prevent deletion of referenced accounts. Corrections preserve the original creator and recording time, and separately record the admin and before/after values. See [inventory change history](inventory-history.md) for step 3.
+
+Movement quantities cannot be edited. Cancel and enter a new action to change quantity; cancelling an addition requires enough stock to reverse it.

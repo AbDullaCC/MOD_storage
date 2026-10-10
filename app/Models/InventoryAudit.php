@@ -50,10 +50,14 @@ class InventoryAudit extends Model
                 'addition' => 'إضافة كمية',
                 default => 'سحب كمية',
             },
-            'cancelled' => $this->record_type === 'out' ? 'إلغاء سحب · إعادة للمخزون' : 'إلغاء إضافة · خصم من المخزون',
+            'cancelled' => $this->record_type === 'item' ? 'إلغاء صنف أُدخل بالخطأ' : ($this->record_type === 'out' ? 'إلغاء سحب · إعادة للمخزون' : 'إلغاء إضافة · خصم من المخزون'),
             'edited' => match (count($this->changedFields())) {
-                1 => 'تعديل '.self::FIELD_LABELS[array_key_first($this->changedFields())],
-                default => 'تعديل بيانات '.(self::TYPES[$this->record_type] ?? 'العملية'),
+                1 => 'تعديل '.self::FIELD_LABELS[array_key_first($this->changedFields())].' '.match ($this->record_type) {
+                    'out' => 'لعملية سحب', 'addition' => 'لعملية إضافة', default => 'للصنف',
+                },
+                default => 'تعديل بيانات '.match ($this->record_type) {
+                    'out' => 'عملية سحب', 'addition' => 'عملية إضافة', default => 'الصنف',
+                },
             },
             'archived' => 'أرشفة الصنف',
             'restored' => 'إعادة تفعيل الصنف',
@@ -96,11 +100,11 @@ class InventoryAudit extends Model
         $changes = array_intersect_key($changes, array_flip($this->operationFields()));
 
         if (in_array($this->action, ['cancelled', 'archived', 'restored'])) {
-            $field = $this->record_type === 'item' ? 'archived_at' : 'cancelled_at';
+            $field = $this->record_type === 'item' && $this->action !== 'cancelled' ? 'archived_at' : 'cancelled_at';
             $before = ! empty($this->before_values[$field]);
             $after = ! empty($this->after_values[$field]);
             if ($before !== $after) {
-                $inactive = $this->record_type === 'item' ? 'مؤرشف' : 'ملغاة';
+                $inactive = $field === 'archived_at' ? 'مؤرشف' : 'ملغى';
                 $active = $this->record_type === 'item' ? 'نشط' : 'سارية';
                 $changes['status'] = ['before' => $before ? $inactive : $active, 'after' => $after ? $inactive : $active];
             }

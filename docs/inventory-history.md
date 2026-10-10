@@ -6,7 +6,7 @@ For newly recorded operations, the before/after comparison shows the actual stoc
 
 ## Corrections and cancellation
 
-- Editing descriptive fields or operation dates retains the original creator and quantity. The audit entry keeps the original and corrected values plus the admin's reason.
+- Employees edit their own descriptive fields or operation dates; admins can edit any record. These edits retain the original creator and quantity. Movement edit dialogs include item selection and details; changing the selected item creates a linked replacement with the same quantity. Changing movement quantity requires cancelling and entering a new action. Initial item quantities are editable only before any movement history. The audit entry keeps original/corrected values and the actor's reason. See [employee corrections](employee-corrections.md).
 - Cancelling a withdrawal restores its quantity to stock. Cancelling a restock removes its quantity only when the remaining stock can cover it. The original movement stays visible with its cancellation details.
 - A cancelled movement cannot be edited or cancelled again. Stock totals and the inventory CSV summary exclude cancelled movements; the operations log retains their entries and cancellation details.
 - Items can be archived only at zero stock. Archiving retains their movements and audit history and hides them from the normal inventory list. Use **عرض المؤرشف أيضاً**, then the item's **سجل العمليات** link to restore it with a reason. Archived items must be restored before further changes.
@@ -39,3 +39,5 @@ The first worker pauses inside the service transaction immediately after acquiri
 - With 10 units and competing requests for 4 and 6, both succeed and stock ends at zero. Their audit balances must form the sequence 10 → 6 → 0, with the correct user, quantity, and movement ID for each entry.
 
 Run these cases with `php artisan test --filter=InventoryConcurrencyTest`, or run the complete correctness, permission, and audit checks with `php artisan test`. The database-locking protection already existed; this adds direct verification of simultaneous withdrawals without changing application behavior.
+
+Concurrency verification also covers item replacement competing with its first withdrawal in both orders, and movement cancellation alongside another withdrawal. Replacement and cancellation rules use the same item locks. See [employee corrections](employee-corrections.md).

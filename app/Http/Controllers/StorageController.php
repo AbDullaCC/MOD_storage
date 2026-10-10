@@ -7,6 +7,7 @@ use App\Models\Out;
 use App\Models\ProductIn;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class StorageController extends Controller
 {
@@ -41,7 +42,7 @@ class StorageController extends Controller
         // withQueryString() ensures filters stay when you click "Page 2"
         $products = $query->latest('added_at')->paginate(20)->withQueryString();
 
-        return view('storage.index', compact('products'));
+        return view('storage.index', ['products' => $products, 'movementProducts' => ProductIn::whereNull('archived_at')->orderBy('name')->get(['id', 'name'])]);
     }
 
     // Export inventory to CSV (Excel-compatible)
@@ -109,20 +110,7 @@ class StorageController extends Controller
     // Add a new item to storage
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            // REQUIRED FIELDS
-            'name' => 'required',
-            'category' => 'required',
-            'quantity' => 'required|integer|min:1',
-            'added_at' => 'required|date|before_or_equal:now',
-
-            // OPTIONAL FIELDS (Nullable)
-            'reciever' => 'nullable',
-            'serial_number' => 'nullable|unique:product_ins,serial_number',
-            'manufacturer' => 'nullable',
-            'model_type' => 'nullable',
-            'description' => 'nullable',
-        ], [
+        $validated = $request->validate($this->itemRules(), [
             'added_at.before_or_equal' => 'خطأ: لا يمكن اختيار تاريخ في المستقبل!',
         ]);
 
@@ -176,22 +164,17 @@ class StorageController extends Controller
     public function updateItem(Request $request, $id)
     {
         $item = ProductIn::findOrFail($id);
+        $this->authorize('correct-inventory', $item);
 
-        $validated = $request->validate([
-            'name' => 'required',
-            'category' => 'required',
-            'added_at' => 'required|date|before_or_equal:now',
-            'reciever' => 'nullable',
-            'manufacturer' => 'nullable',
-            'model_type' => 'nullable',
-            'serial_number' => 'nullable|unique:product_ins,serial_number,'.$item->id, // Ignore self for unique check
-            'description' => 'nullable',
-        ]);
+        $rules = $this->itemRules($item->id);
+        $rules['quantity'] = 'sometimes|integer|min:1|max:2147483647';
+        $validated = $request->validate($rules);
+        $saved = $this->inventory->updateItem((int) $id, $validated, $this->reason($request), $request->user());
+        if ($saved->id !== $item->id) {
+            return redirect()->route('storage.index', ['search' => $saved->name])->with('success', 'تم حفظ الصنف بالكمية المصححة مع الاحتفاظ بالسجل الأصلي.');
+        }
 
-        // Note: We deliberately do NOT update 'quantity' here.
-        $this->inventory->edit(ProductIn::class, (int) $id, $validated, $this->reason($request), $request->user());
-
-        return back()->with('success', 'تم تعديل بيانات العنصر بنجاح!');
+        return back()->with('success', 'تم تعديل بيانات الصنف بنجاح!');
     }
 
     public function destroyItem(Request $request, $id)
@@ -206,21 +189,17 @@ class StorageController extends Controller
     public function updateOut(Request $request, $id)
     {
         $out = Out::findOrFail($id);
+        $this->authorize('correct-inventory', $out);
 
-        $validated = $request->validate([
-            'date' => 'required|date|before_or_equal:now',
-            'destination' => 'nullable',
-            'note' => 'nullable',
-        ]);
+        $validated = $request->validate($this->movementRules('out'));
+        $this->inventory->updateMovement(Out::class, (int) $id, $validated, $this->reason($request), $request->user());
 
-        // Quantity is excluded from update
-        $this->inventory->edit(Out::class, (int) $id, $validated, $this->reason($request), $request->user());
-
-        return back()->with('success', 'تم تعديل بيانات السحب بنجاح.');
+        return back()->with('success', 'تم حفظ تعديلات عملية السحب.');
     }
 
     public function destroyOut(Request $request, $id)
     {
+        $this->authorize('correct-inventory', Out::findOrFail($id));
         $this->inventory->cancel(Out::class, (int) $id, $this->reason($request), $request->user());
 
         return back()->with('success', 'تم إلغاء عملية السحب واسترجاع الكمية للمخزن.');
@@ -231,21 +210,17 @@ class StorageController extends Controller
     public function updateAddition(Request $request, $id)
     {
         $addition = Addition::findOrFail($id);
+        $this->authorize('correct-inventory', $addition);
 
-        $validated = $request->validate([
-            'date' => 'required|date|before_or_equal:now',
-            'source' => 'nullable',
-            'note' => 'nullable',
-        ]);
+        $validated = $request->validate($this->movementRules('addition'));
+        $this->inventory->updateMovement(Addition::class, (int) $id, $validated, $this->reason($request), $request->user());
 
-        // Quantity is excluded from update
-        $this->inventory->edit(Addition::class, (int) $id, $validated, $this->reason($request), $request->user());
-
-        return back()->with('success', 'تم تعديل بيانات الإضافة بنجاح.');
+        return back()->with('success', 'تم حفظ تعديلات عملية الإضافة.');
     }
 
     public function destroyAddition(Request $request, $id)
     {
+        $this->authorize('correct-inventory', Addition::findOrFail($id));
         $this->inventory->cancel(Addition::class, (int) $id, $this->reason($request), $request->user());
 
         return back()->with('success', 'تم إلغاء الإضافة مع الاحتفاظ بسجلها.');
@@ -256,6 +231,39 @@ class StorageController extends Controller
         $this->inventory->archive((int) $id, $this->reason($request), $request->user(), true);
 
         return back()->with('success', 'تمت إعادة تفعيل العنصر.');
+    }
+
+    public function cancelUnusedItem(Request $request, $id)
+    {
+        $item = ProductIn::findOrFail($id);
+        $this->authorize('correct-inventory', $item);
+        $this->inventory->cancelItem($item->id, $this->reason($request), $request->user());
+
+        return back()->with('success', 'أُلغي الصنف وأزيل أثر كميته من المخزون مع الاحتفاظ بسجله.');
+    }
+
+    private function movementRules(string $kind): array
+    {
+        return [
+            'product_in_id' => 'sometimes|required|integer|exists:product_ins,id',
+            'quantity' => 'sometimes|required|integer|min:1|max:2147483647',
+            'date' => 'required|date|before_or_equal:now',
+            $kind === 'out' ? 'destination' : 'source' => 'nullable|string|max:255',
+            'note' => 'nullable|string',
+        ];
+    }
+
+    private function itemRules(?int $ignoreId = null): array
+    {
+        return [
+            'name' => 'required|string|max:255', 'category' => 'required|string|max:255',
+            'quantity' => 'required|integer|min:1|max:2147483647',
+            'added_at' => 'required|date|before_or_equal:now',
+            'reciever' => 'nullable|string|max:255',
+            'serial_number' => ['nullable', 'string', 'max:255', Rule::unique('product_ins', 'serial_number')->whereNull('cancelled_at')->ignore($ignoreId)],
+            'manufacturer' => 'nullable|string|max:255', 'model_type' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+        ];
     }
 
     private function reason(Request $request): string

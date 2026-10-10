@@ -27,6 +27,12 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->restrictOnDelete();
             $table->string('created_by_name')->nullable();
             $table->timestamp('archived_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
+            $table->foreignId('cancelled_by')->nullable()->constrained('users')->restrictOnDelete();
+            $table->string('cancelled_by_name')->nullable();
+            $table->text('cancellation_reason')->nullable();
+            $table->string('active_serial_number')->nullable()->storedAs('CASE WHEN cancelled_at IS NULL THEN serial_number ELSE NULL END');
+            $table->unique('active_serial_number');
             $table->timestamps(); // Created_at, Updated_at
         });
     }
