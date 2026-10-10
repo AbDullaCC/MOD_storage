@@ -28,3 +28,14 @@ If saving the audit fails, the inventory change rolls back too. Stock changes lo
 There are no application routes to edit or delete audit entries. Model guards reject deleting inventory records and updating/deleting audit entries; foreign keys prevent deleting referenced items/accounts. These controls preserve history through the application's workflows. A database administrator with direct SQL access can still change database contents.
 
 The MySQL feature tests cover snapshots, required reasons, authorization, stock reversals, repeated cancellation, archive/restore, rollback on audit failure, exports, escaped content, and actor-name preservation.
+
+## Inventory correctness verification
+
+`InventoryConcurrencyTest` runs real withdrawals through `InventoryService` in two independent PHP processes with separate MySQL connections. It uses `DatabaseMigrations` so fixtures are committed and visible to both workers; the normal test bootstrap and worker both reject any database other than `mod_storage_testing`. No application data is used or changed.
+
+The first worker pauses inside the service transaction immediately after acquiring the item row lock. The second starts its competing withdrawal and must remain blocked until the first is released. Both processes are stopped before database cleanup, including on test failure.
+
+- With 10 units and competing requests for 7 each, one withdrawal succeeds, the second is rejected for insufficient stock, and 3 units remain. The rejected request creates neither a withdrawal nor an audit entry.
+- With 10 units and competing requests for 4 and 6, both succeed and stock ends at zero. Their audit balances must form the sequence 10 → 6 → 0, with the correct user, quantity, and movement ID for each entry.
+
+Run these cases with `php artisan test --filter=InventoryConcurrencyTest`, or run the complete correctness, permission, and audit checks with `php artisan test`. The database-locking protection already existed; this adds direct verification of simultaneous withdrawals without changing application behavior.
