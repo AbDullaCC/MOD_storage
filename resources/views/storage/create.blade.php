@@ -25,7 +25,7 @@
                 <div class="panel-heading"><span class="section-icon status-green"><x-icon name="plus" /></span><div><h2>الكمية وتاريخ الإضافة</h2><p>لزيادة كمية صنف موجود، استخدم زر «إضافة» بجانبه في صفحة المخزون.</p></div></div>
                 <div class="entry-fields">
                     <label for="item-quantity">الكمية <span class="text-green-700">*</span><input id="item-quantity" type="number" name="quantity" min="1" step="1" value="{{ old('quantity') }}" placeholder="عدد الوحدات" required></label>
-                    <label for="item-date">تاريخ إضافة الصنف <span class="text-green-700">*</span><input id="item-date" type="datetime-local" name="added_at" value="{{ old('added_at', now()->format('Y-m-d\TH:i')) }}" max="{{ now()->format('Y-m-d\TH:i') }}" required></label>
+                    <label for="item-date">تاريخ إضافة الصنف <span class="text-green-700">*</span><input id="item-date" type="datetime-local" lang="en" dir="ltr" name="added_at" value="{{ old('added_at', now()->format('Y-m-d\TH:i')) }}" max="{{ now()->format('Y-m-d\TH:i') }}" required></label>
                     <label for="item-description" class="entry-full-width">ملاحظات<textarea id="item-description" name="description" placeholder="أي تفاصيل إضافية عن الصنف..." rows="3">{{ old('description') }}</textarea></label>
                 </div>
             </div>

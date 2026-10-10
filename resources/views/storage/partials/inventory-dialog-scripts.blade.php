@@ -60,7 +60,7 @@
 
         function formatDates(iso) {
             const d = new Date(iso);
-            const displayDate = d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            const displayDate = d.toLocaleDateString('ar-EG', { numberingSystem: 'latn' }) + ' ' + d.toLocaleTimeString('ar-EG', { numberingSystem: 'latn', hour: '2-digit', minute: '2-digit' });
             const pad = (n) => String(n).padStart(2, '0');
             const inputDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
             return { displayDate, inputDate };

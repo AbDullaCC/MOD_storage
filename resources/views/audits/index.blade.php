@@ -30,8 +30,8 @@
                 <label for="audit-product">الصنف<select id="audit-product" name="product_in_id"><option value="">كل الأصناف</option>@foreach($products as $product)<option value="{{ $product->id }}" @selected((string) ($filters['product_in_id'] ?? '') === (string) $product->id)>{{ $product->name }} — #{{ $product->id }}{{ $product->cancelled_at ? ' — ملغى' : ($product->archived_at ? ' — مؤرشف' : '') }}</option>@endforeach</select></label>
                 <label for="audit-type">نوع العملية<select id="audit-type" name="record_type"><option value="">كل الأنواع</option>@foreach(\App\Models\InventoryAudit::TYPES as $value => $label)<option value="{{ $value }}" @selected(($filters['record_type'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></label>
                 <label for="audit-action">الإجراء<select id="audit-action" name="action"><option value="">كل الإجراءات</option>@foreach(\App\Models\InventoryAudit::ACTIONS as $value => $label)<option value="{{ $value }}" @selected(($filters['action'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></label>
-                <label for="audit-from">من تاريخ التسجيل<input id="audit-from" name="from" type="date" value="{{ ($filters['from'] ?? '') }}"></label>
-                <label for="audit-to">إلى تاريخ التسجيل<input id="audit-to" name="to" type="date" value="{{ ($filters['to'] ?? '') }}"></label>
+                <label for="audit-from">من تاريخ التسجيل<input id="audit-from" name="from" type="date" lang="en" dir="ltr" value="{{ ($filters['from'] ?? '') }}"></label>
+                <label for="audit-to">إلى تاريخ التسجيل<input id="audit-to" name="to" type="date" lang="en" dir="ltr" value="{{ ($filters['to'] ?? '') }}"></label>
             </div>
             <div class="audit-filter-footer"><span class="form-hint"><x-icon name="clock" /> يشمل يوم البداية والنهاية · <bdi>{{ config('app.timezone') }}</bdi></span><div class="heading-actions"><a class="ui-button" href="{{ route('audits.index') }}">مسح الفلاتر</a><button class="ui-button ui-button-primary" type="submit"><x-icon name="search" /> عرض النتائج</button></div></div>
         </form>

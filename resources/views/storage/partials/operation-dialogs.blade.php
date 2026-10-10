@@ -14,7 +14,7 @@
                 <label>الرقم التسلسلي<input type="text" name="serial_number" id="edit-sn"></label>
                 <label>المستلم<input type="text" name="reciever" id="edit-receiver"></label>
                 <label for="edit-item-quantity">الكمية عند إنشاء الصنف<input type="number" name="quantity" id="edit-item-quantity" min="1" max="2147483647" step="1" required aria-describedby="edit-item-quantity-hint"><small id="edit-item-quantity-hint" class="form-hint"></small></label>
-                <label>تاريخ إضافة الصنف<input type="datetime-local" name="added_at" id="edit-date" required max="{{ now()->format('Y-m-d\TH:i') }}"></label>
+                <label>تاريخ إضافة الصنف<input type="datetime-local" lang="en" dir="ltr" name="added_at" id="edit-date" required max="{{ now()->format('Y-m-d\TH:i') }}"></label>
                 <label class="full-width">الوصف<textarea name="description" id="edit-desc" rows="2"></textarea></label>
             </div>
             <label class="reason-field">سبب التعديل <span class="text-blue-600">*</span><textarea name="reason" required minlength="3" maxlength="1000" rows="2" placeholder="ما الذي استدعى تصحيح هذه البيانات؟"></textarea><small>يظهر هذا السبب في سجل العمليات مع اسمك ووقت التعديل.</small></label>
@@ -40,7 +40,7 @@
                 @endforeach
             </select></label>
             <label for="edit-{{ $kind }}-{{ $dialog['field'] }}">{{ $dialog['label'] }}<input type="text" name="{{ $dialog['field'] }}" id="edit-{{ $kind }}-{{ $dialog['field'] }}" placeholder="{{ $dialog['label'] }} (اختياري)"></label>
-            <label for="edit-{{ $kind }}-date">تاريخ العملية<input type="datetime-local" name="date" id="edit-{{ $kind }}-date" required max="{{ now()->format('Y-m-d\TH:i') }}"></label>
+            <label for="edit-{{ $kind }}-date">تاريخ العملية<input type="datetime-local" lang="en" dir="ltr" name="date" id="edit-{{ $kind }}-date" required max="{{ now()->format('Y-m-d\TH:i') }}"></label>
             <label class="full-width" for="edit-{{ $kind }}-note">ملاحظات<textarea name="note" id="edit-{{ $kind }}-note" rows="2" placeholder="تفاصيل إضافية عن العملية"></textarea></label>
             </div>
             <label class="reason-field" for="edit-{{ $kind }}-reason">سبب التعديل <span class="text-blue-600">*</span><textarea id="edit-{{ $kind }}-reason" name="reason" required minlength="3" maxlength="1000" rows="2" placeholder="وضّح سبب تصحيح بيانات العملية"></textarea><small>سيُحفظ السبب مع اسمك في سجل العمليات.</small></label>
@@ -77,7 +77,7 @@
             <input type="hidden" name="product_in_id" id="{{ $kind }}-id">
             <label>الكمية<input type="number" name="quantity" id="{{ $kind }}-qty" min="1" value="1" required></label>
             <label>{{ $dialog['label'] }}<input type="text" name="{{ $dialog['field'] }}" placeholder="{{ $dialog['label'] }} (اختياري)"></label>
-            <label>تاريخ العملية<input type="datetime-local" name="date" value="{{ now()->format('Y-m-d\TH:i') }}" max="{{ now()->format('Y-m-d\TH:i') }}" required></label>
+            <label>تاريخ العملية<input type="datetime-local" lang="en" dir="ltr" name="date" value="{{ now()->format('Y-m-d\TH:i') }}" max="{{ now()->format('Y-m-d\TH:i') }}" required></label>
             <label>ملاحظات<textarea name="note" rows="2" placeholder="تفاصيل إضافية عن العملية"></textarea></label>
             <div class="dialog-footer"><button type="button" onclick="closeModal('{{ $kind }}-modal')" class="ui-button">رجوع</button><button type="submit" class="ui-button {{ $kind === 'add' ? 'ui-button-success' : 'ui-button-danger' }}"><x-icon name="check" />{{ $dialog['action'] }}</button></div>
         </form>
