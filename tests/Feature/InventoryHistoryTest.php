@@ -73,7 +73,7 @@ class InventoryHistoryTest extends TestCase
         $this->assertNull($item->fresh()->created_by);
         $this->assertNull($item->fresh()->archived_at);
         $this->assertSame($admin->id, $events[1]->actor_id);
-        $this->get('/storage/item/'.$item->id.'/history')->assertOk()->assertSee('Correct label')->assertSee('History item')->assertSee('Second correction');
+        $this->get('/audits?product_in_id='.$item->id)->assertOk()->assertSee('Correct label')->assertSee('History item')->assertSee('Second correction');
     }
 
     public function test_history_shows_real_stock_before_new_operations_and_original_fields_before_corrections(): void
@@ -86,7 +86,7 @@ class InventoryHistoryTest extends TestCase
         $service->edit(Out::class, $out->id, ['destination' => 'Corrected office', 'note' => 'Delivery corrected'], 'Correct destination', $actor);
         $service->cancel(Out::class, $out->id, 'Duplicate withdrawal', $actor);
 
-        $response = $this->get('/storage/item/'.$item->id.'/history')->assertOk();
+        $response = $this->get('/audits?product_in_id='.$item->id)->assertOk();
         $document = new \DOMDocument;
         $previousErrors = libxml_use_internal_errors(true);
         try {
@@ -98,22 +98,27 @@ class InventoryHistoryTest extends TestCase
         $xpath = new \DOMXPath($document);
         $events = InventoryAudit::orderBy('id')->get();
         foreach ($events as $index => $event) {
-            $article = '//article[@data-audit-event="'.$event->id.'"]';
+            $article = '//tbody[@data-audit-event="'.$event->id.'"]';
             $balance = $article.'//table[@aria-label="رصيد المخزون قبل العملية وبعدها"]/tbody/tr';
-            $this->assertSame((string) [0, 10, 15, 12, 12][$index], $xpath->evaluate('string('.$balance.'/td[2])'));
-            $this->assertSame((string) [10, 15, 12, 12, 15][$index], $xpath->evaluate('string('.$balance.'/td[3])'));
+            if ($event->stock_before !== $event->stock_after) {
+                $this->assertSame((string) [0, 10, 15, 12, 12][$index], $xpath->evaluate('string('.$balance.'/*[2])'));
+                $this->assertSame((string) [10, 15, 12, 12, 15][$index], $xpath->evaluate('string('.$balance.'/*[3])'));
+            } else {
+                $this->assertSame(0, $xpath->query($balance)->length);
+            }
             $comparison = $article.'//table[@aria-label="مقارنة بيانات العملية"]';
             if ($event->action === 'created') {
                 $this->assertSame(0, $xpath->query($comparison)->length);
                 $this->assertSame(1, $xpath->query($article.'//dl')->length);
             } elseif ($event->action === 'edited') {
-                $destination = $comparison.'/tbody/tr[td[1]="الوجهة"]';
-                $this->assertSame('Original office', $xpath->evaluate('string('.$destination.'/td[2])'));
-                $this->assertSame('Corrected office', $xpath->evaluate('string('.$destination.'/td[3])'));
-                $this->assertSame('غير محدد', $xpath->evaluate('string('.$comparison.'/tbody/tr[td[1]="ملاحظات"]/td[2])'));
+                $this->assertSame(0, $xpath->query($comparison)->length);
+                $this->assertStringContainsString('Original office', $xpath->evaluate('string('.$article.'/tr[1])'));
+                $this->assertSame('Corrected office', $xpath->evaluate('string('.$article.'//dl/div[dt="الوجهة"]/dd)'));
+                $this->assertSame('Delivery corrected', $xpath->evaluate('string('.$article.'//dl/div[dt="ملاحظات"]/dd)'));
             } else {
-                $this->assertSame('3', $xpath->evaluate('string('.$comparison.'/tbody/tr[td[1]="الكمية"]/td[2])'));
-                $this->assertSame('Corrected office', $xpath->evaluate('string('.$comparison.'/tbody/tr[td[1]="الوجهة"]/td[2])'));
+                $this->assertSame(0, $xpath->query($comparison)->length);
+                $this->assertSame('3', $xpath->evaluate('string('.$article.'//dl/div[dt="الكمية"]/dd)'));
+                $this->assertSame('Corrected office', $xpath->evaluate('string('.$article.'//dl/div[dt="الوجهة"]/dd)'));
             }
         }
     }
@@ -155,7 +160,7 @@ class InventoryHistoryTest extends TestCase
         $this->assertSame(10, $item->current_stock);
         $this->assertDatabaseCount('outs', 1);
         $this->assertDatabaseCount('inventory_audits', 1);
-        $this->get('/storage/report?show_all=1')->assertOk()->assertSee('ملغاة')->assertSee('Duplicate withdrawal');
+        $this->get('/audits')->assertOk()->assertSee('ملغاة')->assertSee('Duplicate withdrawal');
     }
 
     public function test_restock_cancellation_rejects_negative_stock_and_can_succeed_after_a_withdrawal_is_cancelled(): void
@@ -194,7 +199,7 @@ class InventoryHistoryTest extends TestCase
         $this->post('/storage/item/'.$item->id.'/restore', ['reason' => 'Stocking item again'])->assertSessionHasNoErrors();
         $this->assertNull($item->fresh()->archived_at);
         $this->assertSame(['archived', 'restored'], InventoryAudit::orderBy('id')->pluck('action')->all());
-        $this->get('/storage/item/'.$item->id.'/history')->assertOk()->assertSee('No longer stocked')->assertSee('Stocking item again');
+        $this->get('/audits?product_in_id='.$item->id)->assertOk()->assertSee('No longer stocked')->assertSee('Stocking item again');
     }
 
     public function test_export_uses_active_movements_and_excludes_archived_items(): void
@@ -277,6 +282,6 @@ class InventoryHistoryTest extends TestCase
         $this->put('/storage/item/'.$item->id, ['name' => 'Changed', 'category' => 'Test', 'added_at' => now()->subDay()->toDateTimeString(), 'reason' => $reason])->assertSessionHasNoErrors();
         $oldName = $actor->name;
         $actor->update(['name' => 'Renamed admin']);
-        $this->get('/storage/item/'.$item->id.'/history')->assertOk()->assertSee($oldName)->assertSee($reason)->assertDontSee($reason, false);
+        $this->get('/audits?product_in_id='.$item->id)->assertOk()->assertSee($oldName)->assertSee($reason)->assertDontSee($reason, false);
     }
 }

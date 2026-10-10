@@ -106,13 +106,13 @@ class AccessControlTest extends TestCase
         $this->get('/storage/export')->assertForbidden();
     }
 
-    public function test_admin_can_access_reports_and_export_inventory(): void
+    public function test_admin_can_access_the_operations_log_and_export_inventory(): void
     {
         ProductIn::create(['name' => 'Report item', 'category' => 'Test', 'quantity' => 10, 'added_at' => now()->subMinute()]);
         $this->actingAs($this->account('admin'));
-        $this->get('/storage')->assertOk()->assertSee('href="'.route('storage.report').'"', false)->assertSee('id="export-btn"', false);
-        $this->get('/storage/report')->assertOk()->assertSee('Report item');
-        $this->get('/storage/report?show_all=1&search=Report')->assertOk()->assertSee('Report item');
+        $this->get('/storage')->assertOk()->assertSee('href="'.route('audits.index').'"', false)->assertDontSee('href="'.route('storage.report').'"', false)->assertSee('id="export-btn"', false);
+        $this->get('/storage/report')->assertRedirect('/audits');
+        $this->get('/audits')->assertOk()->assertSee('Report item');
         $this->get('/storage/export')->assertOk()->assertDownload();
     }
 

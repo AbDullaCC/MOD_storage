@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Addition;
-use App\Models\InventoryAudit;
 use App\Models\Out;
 use App\Models\ProductIn;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class StorageController extends Controller
 {
@@ -260,154 +258,8 @@ class StorageController extends Controller
         return back()->with('success', 'تمت إعادة تفعيل العنصر.');
     }
 
-    public function history($id)
-    {
-        $product = ProductIn::findOrFail($id);
-        $events = InventoryAudit::where('product_in_id', $product->id)->orderByDesc('id')->paginate(20);
-
-        return view('storage.history', compact('product', 'events'));
-    }
-
     private function reason(Request $request): string
     {
         return $request->validate(['reason' => 'required|string|min:3|max:1000'])['reason'];
-    }
-
-    // --- REPORT METHOD ---
-    public function report(Request $request)
-    {
-        // 1. Handle "All Time" vs Date Range
-        if ($request->has('show_all')) {
-            $start = \Carbon\Carbon::create(2000, 1, 1);
-            $end = \Carbon\Carbon::create(2030, 12, 31); // Future date to catch everything
-
-            // FIX: We populate the inputs so they persist during search/filter
-            $dateInputs = ['start' => $start->format('Y-m-d'), 'end' => $end->format('Y-m-d')];
-        } else {
-            $start = $request->start_date ? \Carbon\Carbon::parse($request->start_date) : now()->startOfMonth();
-            $end = $request->end_date ? \Carbon\Carbon::parse($request->end_date)->endOfDay() : now()->endOfDay();
-            $dateInputs = ['start' => $start->format('Y-m-d'), 'end' => $end->format('Y-m-d')];
-        }
-
-        $querySearch = $request->search;
-        $typeFilter = $request->type ?? 'all'; // 'all', 'in', 'out'
-
-        // 2. Fetch INs (Additions)
-        $ins = collect([]);
-        if ($typeFilter == 'all' || $typeFilter == 'in') {
-            $insQuery = ProductIn::whereBetween('added_at', [$start, $end]);
-
-            // Search Logic for Inputs
-            if ($querySearch) {
-                $insQuery->where(function ($q) use ($querySearch) {
-                    $q->where('name', 'like', "%$querySearch%")
-                        ->orWhere('reciever', 'like', "%$querySearch%")
-                        ->orWhere('serial_number', 'like', "%$querySearch%");
-                });
-            }
-
-            $ins = $insQuery->get()->map(function ($item) {
-                return [
-                    'type' => 'in',
-                    'date' => $item->added_at, // Assumes you added 'datetime' cast to Model
-                    'action_label' => 'إنشاء صنف جديد',
-                    'cancelled' => false,
-                    'cancellation_details' => null,
-                    'recorded_by' => $item->recorded_by_label,
-                    'recorded_at' => $item->recorded_at_display,
-                    'name' => $item->name,
-                    'quantity' => $item->quantity,
-                    'sn' => $item->serial_number,
-                    'party' => $item->reciever,
-                    'note' => 'إنشاء صنف جديد وتسجيل كميته',
-                ];
-            });
-
-            // Restock additions (new batches on existing items)
-            $restocksQuery = Addition::with('productIn')->whereBetween('date', [$start, $end]);
-
-            if ($querySearch) {
-                $restocksQuery->where(function ($q) use ($querySearch) {
-                    $q->where('source', 'like', "%$querySearch%")
-                        ->orWhere('note', 'like', "%$querySearch%")
-                        ->orWhereHas('productIn', function ($subQ) use ($querySearch) {
-                            $subQ->where('name', 'like', "%$querySearch%")
-                                ->orWhere('serial_number', 'like', "%$querySearch%");
-                        });
-                });
-            }
-
-            $restocks = $restocksQuery->get()->map(function ($item) {
-                return [
-                    'type' => 'in',
-                    'date' => $item->date,
-                    'action_label' => 'إضافة كمية',
-                    'cancelled' => (bool) $item->cancelled_at,
-                    'cancellation_details' => $item->cancelled_at ? $item->cancelled_by_name.' — '.$item->cancelled_at->format('Y-m-d H:i:s').' — '.$item->cancellation_reason : null,
-                    'recorded_by' => $item->recorded_by_label,
-                    'recorded_at' => $item->recorded_at_display,
-                    'name' => $item->productIn->name ?? 'عنصر محذوف',
-                    'quantity' => $item->quantity,
-                    'sn' => $item->productIn->serial_number ?? '-',
-                    'party' => $item->source,
-                    'note' => $item->note ?? 'إضافة كمية (دفعة جديدة)',
-                ];
-            });
-
-            $ins = $ins->concat($restocks);
-        }
-
-        // 3. Fetch OUTs (Removals)
-        $outs = collect([]);
-        if ($typeFilter == 'all' || $typeFilter == 'out') {
-            $outsQuery = Out::with('productIn')->whereBetween('date', [$start, $end]);
-
-            // Search Logic for Outputs
-            if ($querySearch) {
-                $outsQuery->where(function ($q) use ($querySearch) {
-                    $q->where('destination', 'like', "%$querySearch%")
-                        ->orWhere('note', 'like', "%$querySearch%")
-                        ->orWhereHas('productIn', function ($subQ) use ($querySearch) {
-                            $subQ->where('name', 'like', "%$querySearch%")
-                                ->orWhere('serial_number', 'like', "%$querySearch%");
-                        });
-                });
-            }
-
-            $outs = $outsQuery->get()->map(function ($item) {
-                return [
-                    'type' => 'out',
-                    'date' => $item->date, // Assumes you added 'datetime' cast to Model
-                    'action_label' => 'سحب',
-                    'cancelled' => (bool) $item->cancelled_at,
-                    'cancellation_details' => $item->cancelled_at ? $item->cancelled_by_name.' — '.$item->cancelled_at->format('Y-m-d H:i:s').' — '.$item->cancellation_reason : null,
-                    'recorded_by' => $item->recorded_by_label,
-                    'recorded_at' => $item->recorded_at_display,
-                    'name' => $item->productIn->name ?? 'عنصر محذوف',
-                    'quantity' => $item->quantity,
-                    'sn' => $item->productIn->serial_number ?? '-',
-                    'party' => $item->destination,
-                    'note' => $item->note ?? 'سحب مخزني',
-                ];
-            });
-        }
-
-        // 4. Merge and Sort
-        $allTransactions = $ins->concat($outs)->sortByDesc('date');
-
-        // 2. Manual Pagination Logic
-        $perPage = 20; // Items per page
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $currentItems = $allTransactions->slice(($currentPage - 1) * $perPage, $perPage)->all();
-
-        $transactions = new LengthAwarePaginator(
-            $currentItems,
-            $allTransactions->count(),
-            $perPage,
-            $currentPage,
-            ['path' => $request->url(), 'query' => $request->query()] // Keeps the filters in the URL
-        );
-
-        return view('storage.report', compact('transactions', 'dateInputs', 'typeFilter', 'querySearch'));
     }
 }

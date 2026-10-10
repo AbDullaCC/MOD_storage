@@ -1,6 +1,6 @@
 # Inventory change history (step 3)
 
-Admins open **سجل التغييرات** from an item's details. Each entry shows the operation, actor's name at the time, server recording time, stock before/after, and the saved field values. Corrections require a reason of 3–1000 characters. Changes recorded before this feature was enabled are not reconstructed.
+Admins open **سجل العمليات** from an item's details. This opens the single operations page with that item already selected. Saved audit entries show the operation, actor's name at the time, server recording time, stock before/after, and saved field values. Corrections require a reason of 3–1000 characters. Earlier operations also appear as clearly labelled legacy rows with their current stored fields; no historical balances or edits are invented. See [operations log](audit-screen.md).
 
 For newly recorded operations, the before/after comparison shows the actual stock balance. Their recorded fields appear separately because the record did not exist beforehand. Edits and cancellations also show the original field values alongside the resulting values; an unset field is labelled explicitly. Green indicates incoming stock, red indicates outgoing stock/cancellation, and amber identifies corrections.
 
@@ -8,8 +8,8 @@ For newly recorded operations, the before/after comparison shows the actual stoc
 
 - Editing descriptive fields or operation dates retains the original creator and quantity. The audit entry keeps the original and corrected values plus the admin's reason.
 - Cancelling a withdrawal restores its quantity to stock. Cancelling a restock removes its quantity only when the remaining stock can cover it. The original movement stays visible with its cancellation details.
-- A cancelled movement cannot be edited or cancelled again. Stock totals and the CSV summary exclude cancelled movements; the movement report still shows them.
-- Items can be archived only at zero stock. Archiving retains their movements and audit history and hides them from the normal inventory list. Use **عرض المؤرشف أيضاً**, then the item's history page to restore it with a reason. Archived items must be restored before further changes.
+- A cancelled movement cannot be edited or cancelled again. Stock totals and the inventory CSV summary exclude cancelled movements; the operations log retains their entries and cancellation details.
+- Items can be archived only at zero stock. Archiving retains their movements and audit history and hides them from the normal inventory list. Use **عرض المؤرشف أيضاً**, then the item's **سجل العمليات** link to restore it with a reason. Archived items must be restored before further changes.
 
 ## How the code saves history
 

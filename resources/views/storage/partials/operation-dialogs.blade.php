@@ -17,7 +17,7 @@
                 <label class="full-width">تاريخ العملية<input type="datetime-local" name="added_at" id="edit-date" required max="{{ now()->format('Y-m-d\TH:i') }}"></label>
                 <label class="full-width">الوصف<textarea name="description" id="edit-desc" rows="2"></textarea></label>
             </div>
-            <label class="reason-field">سبب التعديل <span class="text-blue-600">*</span><textarea name="reason" required minlength="3" maxlength="1000" rows="2" placeholder="ما الذي استدعى تصحيح هذه البيانات؟"></textarea><small>يظهر هذا السبب في سجل التغييرات مع اسمك ووقت التعديل.</small></label>
+            <label class="reason-field">سبب التعديل <span class="text-blue-600">*</span><textarea name="reason" required minlength="3" maxlength="1000" rows="2" placeholder="ما الذي استدعى تصحيح هذه البيانات؟"></textarea><small>يظهر هذا السبب في سجل العمليات مع اسمك ووقت التعديل.</small></label>
             <div class="dialog-footer"><button type="button" onclick="closeModal('edit-item-modal')" class="ui-button">رجوع للتفاصيل</button><button type="submit" class="ui-button ui-button-warning"><x-icon name="check" /> حفظ التعديلات</button></div>
         </form>
     </div>
@@ -36,7 +36,7 @@
             <label for="edit-{{ $kind }}-{{ $dialog['field'] }}">{{ $dialog['label'] }}<input type="text" name="{{ $dialog['field'] }}" id="edit-{{ $kind }}-{{ $dialog['field'] }}" placeholder="{{ $dialog['label'] }} (اختياري)"></label>
             <label for="edit-{{ $kind }}-date">تاريخ العملية<input type="datetime-local" name="date" id="edit-{{ $kind }}-date" required max="{{ now()->format('Y-m-d\TH:i') }}"></label>
             <label for="edit-{{ $kind }}-note">ملاحظات<textarea name="note" id="edit-{{ $kind }}-note" rows="2" placeholder="تفاصيل إضافية عن العملية"></textarea></label>
-            <label class="reason-field" for="edit-{{ $kind }}-reason">سبب التعديل <span class="text-blue-600">*</span><textarea id="edit-{{ $kind }}-reason" name="reason" required minlength="3" maxlength="1000" rows="2" placeholder="وضّح سبب تصحيح بيانات العملية"></textarea><small>سيُحفظ السبب مع اسمك في سجل التغييرات.</small></label>
+            <label class="reason-field" for="edit-{{ $kind }}-reason">سبب التعديل <span class="text-blue-600">*</span><textarea id="edit-{{ $kind }}-reason" name="reason" required minlength="3" maxlength="1000" rows="2" placeholder="وضّح سبب تصحيح بيانات العملية"></textarea><small>سيُحفظ السبب مع اسمك في سجل العمليات.</small></label>
             <div class="dialog-footer"><button type="button" onclick="closeModal('edit-{{ $kind }}-modal')" class="ui-button">رجوع للتفاصيل</button><button type="submit" class="ui-button ui-button-warning"><x-icon name="check" /> حفظ التعديلات</button></div>
         </form>
     </div>

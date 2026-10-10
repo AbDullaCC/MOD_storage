@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\UserController;
@@ -36,10 +37,13 @@ Route::middleware(['auth', 'active', 'auth.session'])->group(function () {
 
     // Edit/Delete ITEMS
     Route::middleware('can:admin')->group(function () {
-        Route::get('/storage/report', [StorageController::class, 'report'])->name('storage.report');
+        Route::get('/audits', [AuditController::class, 'index'])->name('audits.index');
+        Route::get('/audits/export', [AuditController::class, 'export'])->name('audits.export');
+        Route::get('/audits/items/{product}', [AuditController::class, 'itemCard'])->whereNumber('product')->name('audits.itemCard');
+        Route::redirect('/storage/report', '/audits')->name('storage.report');
         Route::get('/storage/export', [StorageController::class, 'export'])->name('storage.export');
         Route::resource('users', UserController::class)->except(['show', 'destroy']);
-        Route::get('/storage/item/{id}/history', [StorageController::class, 'history'])->name('storage.history');
+        Route::get('/storage/item/{id}/history', [AuditController::class, 'item'])->whereNumber('id')->name('storage.history');
         Route::post('/storage/item/{id}/restore', [StorageController::class, 'restoreItem'])->name('storage.restoreItem');
         Route::put('/storage/item/{id}', [StorageController::class, 'updateItem'])->name('storage.updateItem');
         Route::delete('/storage/item/{id}', [StorageController::class, 'destroyItem'])->name('storage.destroyItem');

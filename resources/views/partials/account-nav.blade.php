@@ -7,7 +7,7 @@
         <nav class="app-navigation" aria-label="التنقل الرئيسي">
             <a href="{{ route('storage.index') }}" class="nav-button {{ request()->routeIs('storage.index', 'storage.create', 'storage.history') ? 'is-active' : '' }}" @if(request()->routeIs('storage.index', 'storage.create', 'storage.history')) aria-current="page" @endif><x-icon name="box" /> المخزون</a>
             @can('admin')
-                <a href="{{ route('storage.report') }}" class="nav-button {{ request()->routeIs('storage.report') ? 'is-active' : '' }}" @if(request()->routeIs('storage.report')) aria-current="page" @endif><x-icon name="chart" /> التقارير</a>
+                <a href="{{ route('audits.index') }}" class="nav-button {{ request()->routeIs('audits.*') ? 'is-active' : '' }}" @if(request()->routeIs('audits.*')) aria-current="page" @endif><x-icon name="history" /> سجل العمليات</a>
                 <a href="{{ route('users.index') }}" class="nav-button {{ request()->routeIs('users.*') ? 'is-active' : '' }}" @if(request()->routeIs('users.*')) aria-current="page" @endif><x-icon name="users" /> إدارة المستخدمين</a>
             @endcan
         </nav>

@@ -23,5 +23,6 @@
         @endif
         @yield('content')
     </main>
+    @yield('dialogs')
 </body>
 </html>

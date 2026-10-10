@@ -9,7 +9,8 @@ The inventory list is at `/storage`. Use **إضافة صنف جديد** to open 
 | Permission | Operator | Admin |
 | --- | --- | --- |
 | View inventory | Yes | Yes |
-| View movement reports and export inventory CSV | No | Yes |
+| Review the operations log, filter by item/user/date/action, and export | No | Yes |
+| Export current inventory CSV | No | Yes |
 | Create items, add stock, and withdraw stock | Yes | Yes |
 | Correct records, cancel movements, archive/restore items, view change history | No | Yes |
 | Create accounts, change roles, disable accounts, reset passwords | No | Yes |
@@ -40,7 +41,7 @@ The PHPUnit configuration forces MySQL and the separate `mod_storage_testing` da
 
 ## Scope
 
-Login, roles, operation attribution, and permanent inventory change history are implemented. Admins correct records with a reason, cancel movements instead of deleting them, and archive items only at zero stock. New accounts default to the operator role unless an admin role is explicitly assigned. The full admin audit screen with filters/export is a subsequent step.
+Login, roles, operation attribution, and permanent inventory change history are implemented. Admins correct records with a reason, cancel movements instead of deleting them, and archive items only at zero stock. New accounts default to the operator role unless an admin role is explicitly assigned. **سجل العمليات** (`/audits`) is the single review page for movements, edits, cancellations, and item history; see [operations log](audit-screen.md). Old report and item-history URLs redirect to it.
 
 The application uses MySQL with one creation migration per table. See [database setup](database.md) for the consolidated migration layout and local database setup.
 
@@ -48,7 +49,7 @@ The application uses MySQL with one creation migration per table. See [database 
 
 New items, restocks, and withdrawals store `created_by` (the authenticated user's ID) and `created_by_name` (their name at recording time). The controller calls `createRecorded()` with validated operation fields and the authenticated user. The same insert writes the operation and attribution, and the client cannot supply the actor or recording time.
 
-`created_at` is the server recording time, separate from the user-entered `added_at` or `date`. Item details, restock/withdrawal history, and movement reports show both dates and the recorded name. Recording timestamps display in the configured application timezone, currently Asia/Damascus. Movement reports distinguish initial stock, restocks, and withdrawals.
+`created_at` is the server recording time, separate from the user-entered `added_at` or `date`. Item details and the operations log show both dates and the recorded name. Recording timestamps display in the configured application timezone, currently Asia/Damascus. The log distinguishes item creation, restocks, withdrawals, and subsequent changes.
 
 Existing records retain their original timestamps and receive no guessed user attribution; they display **سجل سابق / المستخدم غير معروف** (Legacy / user unknown). Records created outside the authenticated workflow, such as seed data, also have unknown attribution. The inventory CSV remains a stock summary; it is not an operation-history export.
 

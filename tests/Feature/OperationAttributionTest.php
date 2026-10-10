@@ -105,7 +105,8 @@ class OperationAttributionTest extends TestCase
             $this->assertSame('Original operator', $record->recorded_by_label);
             $this->assertSame($recordedAt, $record->created_at->toDateTimeString());
         }
-        $this->get('/storage/report?show_all=1')->assertOk()->assertSee('Original operator')->assertDontSee('Renamed operator');
+        $response = $this->get('/audits')->assertOk()->assertSee('Original operator');
+        $this->assertFalse($response->viewData('events')->contains(fn ($event) => $event->actor_name === 'Renamed operator'));
     }
 
     public function test_report_and_item_details_expose_recording_time_and_names_safely(): void
@@ -116,14 +117,15 @@ class OperationAttributionTest extends TestCase
         $this->actingAs($admin)->get('/storage')
             ->assertOk()->assertSee('data-recorded-by="'.e($actor->name).'"', false)
             ->assertSee('id="modal-recorded-at"', false)->assertDontSee($actor->name, false);
-        $response = $this->get('/storage/report?show_all=1')->assertOk()
+        $response = $this->get('/audits')->assertOk()
             ->assertSee($actor->name)->assertDontSee($actor->name, false)
-            ->assertSee($item->recorded_at_display)->assertSee('تاريخ العملية')->assertSee('وقت التسجيل');
-        $rows = collect($response->viewData('transactions')->items());
+            ->assertSee($item->created_at->format('Y-m-d'))->assertSee($item->created_at->format('H:i:s'))
+            ->assertSee('تاريخ العملية')->assertSee('وقت التسجيل');
+        $rows = collect($response->viewData('events')->items());
         $this->assertCount(3, $rows);
-        $this->assertEqualsCanonicalizing(['إنشاء صنف جديد', 'إضافة كمية', 'سحب'], $rows->pluck('action_label')->all());
-        $this->assertSame([$actor->name], $rows->pluck('recorded_by')->unique()->values()->all());
-        $this->assertSame([$item->recorded_at_display], $rows->pluck('recorded_at')->unique()->values()->all());
+        $this->assertEqualsCanonicalizing(['إنشاء صنف جديد', 'إضافة كمية', 'سحب'], $rows->map(fn ($event) => $event->recordLabel())->all());
+        $this->assertSame([$actor->name], $rows->pluck('actor_name')->unique()->values()->all());
+        $this->assertSame([$item->recorded_at_display], $rows->map(fn ($event) => $event->created_at->format('Y-m-d H:i:s'))->unique()->values()->all());
     }
 
     public function test_imported_legacy_data_remains_unattributed_and_preserves_original_dates(): void
@@ -144,7 +146,7 @@ class OperationAttributionTest extends TestCase
         }
         $this->assertSame(10, ProductIn::firstOrFail()->current_stock);
         $this->actingAs(User::factory()->create(['role' => 'admin']))
-            ->get('/storage/report?show_all=1')->assertOk()->assertSee('سجل سابق / المستخدم غير معروف');
+            ->get('/audits')->assertOk()->assertSee('سجل سابق / المستخدم غير معروف');
         $this->get('/storage')->assertOk()->assertSee('سجل سابق / المستخدم غير معروف');
         $this->put('/storage/item/'.$itemId, ['name' => 'Edited legacy item', 'category' => 'Test', 'added_at' => $stamp, 'reason' => 'Correct legacy name'])
             ->assertSessionHasNoErrors();
