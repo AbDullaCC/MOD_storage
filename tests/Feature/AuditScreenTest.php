@@ -464,7 +464,7 @@ class AuditScreenTest extends TestCase
         $legacy = $entries->filter(fn ($event) => $event->is_legacy);
         $this->assertCount(5, $entries);
         $this->assertCount(3, $legacy);
-        $this->assertEqualsCanonicalizing(['item:'.$item->id, 'addition:'.$oldAddition->id, 'out:'.$oldOut->id], $legacy->map(fn ($event) => $event->record_type.':'.$event->record_id)->all());
+        $this->assertEqualsCanonicalizing(['item:'.$item->id, 'addition:'.$oldAddition->id, 'out:'.$oldOut->id], $legacy->map(fn ($event) => $event->record_type.':'.$event->record_id)->values()->all());
         $this->assertSame(1, $entries->filter(fn ($event) => $event->record_type === 'addition' && $event->record_id === $newAddition->id)->count());
         foreach ($legacy as $event) {
             $this->assertNull($event->stock_before);

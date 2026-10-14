@@ -46,7 +46,9 @@ return [
     |
     */
 
-    'encrypt' => false,
+    'encrypt' => env('SESSION_ENCRYPT', false),
+
+    'serialization' => env('SESSION_SERIALIZATION', 'php'),
 
     /*
     |--------------------------------------------------------------------------

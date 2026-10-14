@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام إدارة المخزون</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             font-family: 'Cairo', sans-serif;
@@ -45,18 +44,18 @@
         </div>
 
         @if(session('success'))
-            <div class="bg-green-100 border-r-4 border-green-500 text-green-700 p-4 mb-4 font-bold rounded shadow">✅
+            <div class="bg-green-100 border-r-4 border-green-500 text-green-700 p-4 mb-4 font-bold rounded-sm shadow-sm">✅
                 {{ session('success') }}
             </div>
         @endif
         @if(session('error'))
-            <div class="bg-red-100 border-r-4 border-red-500 text-red-700 p-4 mb-4 font-bold rounded shadow">❌
+            <div class="bg-red-100 border-r-4 border-red-500 text-red-700 p-4 mb-4 font-bold rounded-sm shadow-sm">❌
                 {{ session('error') }}
             </div>
         @endif
 
         @if($errors->any())
-            <div role="alert" class="bg-red-100 text-red-800 p-4 mb-4 rounded"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+            <div role="alert" class="bg-red-100 text-red-800 p-4 mb-4 rounded-sm"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
         <div class="inventory-toolbar">
             <h2>الأصناف <span id="inventory-count" class="count-badge">{{ $products->total() }} صنف</span></h2>
