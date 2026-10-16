@@ -3,7 +3,9 @@ Options -Indexes
 RewriteEngine On
 
 # Private application files must never be served, even if they exist.
-RewriteRule ^(?:app|bootstrap|config|database|resources|routes|storage|vendor|tests|scripts|deployment)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:app|bootstrap|config|database|resources|routes|vendor|tests|scripts|deployment)(?:/|$) - [F,L,NC]
+# /storage is also the inventory route; only deny its private filesystem paths.
+RewriteRule ^storage/(?:app|framework|logs)(?:/|$) - [F,L,NC]
 RewriteRule (^|/)\. - [F,L]
 RewriteRule ^(?:artisan|composer\.(?:json|lock)|package(?:-lock)?\.json|phpunit\.xml|README\.md)$ - [F,L,NC]
 

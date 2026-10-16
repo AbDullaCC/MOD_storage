@@ -6,6 +6,8 @@ Verified on 2026-10-14: 84 tests passed (2,121 assertions) on the separate MySQL
 
 The first package contains 6,551 upload files, about 28 MB unpacked and 8 MB zipped; its largest PHP file is 679,202 bytes. Deployment configuration still needs the actual staging domain and hosting database credentials. No hosting credentials have been entered in this preparation step.
 
+2026-10-15 routing correction: the initial root protection rule incorrectly blocked `/storage`, which is also the inventory route after login. It now blocks only `/storage/app`, `/storage/framework`, and `/storage/logs`, while public inventory URLs pass through to Laravel. Replace only the deployed `htdocs/.htaccess` with the corrected template; do not replace `public/.htaccess`, environment credentials, or the database. The updated Apache check covers 32 requests, including the actual post-login route, inventory forms/actions, private files, and HTTPS redirection. Rerun it locally with `python scripts/verify-infinityfree-routing.py --apache-root C:/laragon/bin/apache/httpd-2.4.66-260223-Win64-VS18`. PUT/DELETE reach Apache's static test handler (405); application handling of those methods is tested separately in Laravel.
+
 ## Changes made
 
 1. Upgraded Laravel 10 to Laravel 13, Sanctum 3 to 4, Tinker 2 to 3, PHPUnit 10 to 12, and their compatible dependencies. Composer resolves for PHP 8.3 so a build made on local PHP 8.4 does not accidentally require PHP 8.4. The existing application structure and inventory schema are retained. CSRF uses Laravel 13's request-forgery middleware; the Sanctum configuration uses its current middleware key.
